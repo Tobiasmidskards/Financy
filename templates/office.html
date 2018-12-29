@@ -1,0 +1,63 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<div class="container dark">
+
+
+<div class="row" >
+	<div class="col-sm-2 col-md-3">
+		<img src="https://www.dolphinwear.com/img/default-product.jpg" width="200px">
+	</div>
+	<div class="col-sm-1 col-md-3">
+		<small>Firma</small>
+		<p><b>{{company['companyname']}}</b></p>
+	</div>
+	<div class="col-sm-1 col-md-3">
+		<small>CEO</small>
+		<p>{{session.name}}</p>
+	</div>
+	<div class="col-sm-1 col-md-3">
+		<small>Midler</small>
+		<p><b>{{company['money']}}</b>,-</p>
+	</div>
+
+</div>
+<hr>
+<div class="row">
+	<div class="col-sm-1 col-md-3">
+
+		<small>Opgaver</small>
+		<table class="table-sm table-striped" style="width:200px;">
+			{% for task in tasks %}
+			<tr>
+				<td>{{task['title']}}</td>
+				<td>{{task['progress']}} %</td>
+			</tr>
+			{% endfor %}
+		</table>
+		<br>
+		<a href="/createTask">
+		<button type="button" name="button" class="btn btn-secondary btn-sm">Ny opgave</button>
+		</a>
+
+	</div>
+	<div class="col-sm-1 col-md-6">
+		<img src="https://www.welovesolo.com/wp-content/uploads/ui/42/p18802qt7o1vle1nuia451ds48cf5-details.jpg" width="500px">
+	</div>
+	<div class="col-sm-2 col-md-3">
+		<small>Ansatte</small>
+		<table class="table-sm table-striped" style="width:200px;">
+			{% for i in range(0,5) %}
+			<tr>
+				<td>-</td>
+			</tr>
+			{% endfor %}
+		</table>
+
+	</div>
+</div>
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="container">
+
+	<h1>Log ind</h1>
+	<form action="" method="POST">
+		<div class="form-group">
+			<label>Brugernavn</label>
+			<input type="text" name="username" class="form-control" value="{{request.form.username}}">
+		</div>
+		<div class="form-group">
+			<label>Adgangskode</label>
+			<input type="password" name="password" class="form-control" value="{{request.form.password}}">
+		</div>
+		<button type="submit" class="btn btn-primary">Log ind</button>
+
+	</form>
+</div>
+
+{% endblock %}

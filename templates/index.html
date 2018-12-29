@@ -5,6 +5,12 @@
 <div class="jumbotron text-center">
 	<h1>Financy</h1>
 	<hr>
+	{% if session.logged_in == NULL %}
+		<a class="btn btn-primary" href="/login">Login</a>
+		<a class="btn btn-secondary" href="/register">Opret bruger</a>
+	{% endif %}
+
+
 </div>
 
 {% endblock %}
