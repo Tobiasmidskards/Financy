@@ -6,6 +6,7 @@
   </button>
   <div class="collapse navbar-collapse" id="navbarNav">
     <ul class="nav navbar-nav">
+			{% if session.logged_in %}
       <li class="nav-item">
         <a class="nav-link" href="/office/{{session.uid}}">Kontoret<span class="sr-only">(current)</span></a>
       </li>
@@ -18,6 +19,7 @@
 			<li class="nav-item">
 				<a class="nav-link" href="/">Finansiering<span class="sr-only">(current)</span></a>
 			</li>
+			{% endif %}
     </ul>
 
 		<div class="collapse navbar-collapse" id="navbarNav">

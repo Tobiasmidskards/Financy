@@ -19,32 +19,46 @@
 	</div>
 	<div class="col-sm-1 col-md-3">
 		<small>Midler</small>
-		<p><b>{{company['money']}}</b>,-</p>
+		<p><b>{{company['money']}}</b> ,-</p>
 	</div>
 
 </div>
 <hr>
 <div class="row">
-	<div class="col-sm-1 col-md-3">
+	<div class="col-sm-2 col-md-9">
 
 		<small>Opgaver</small>
-		<table class="table-sm table-striped" style="width:200px;">
+		<table class="table-sm table-striped" style="">
 			{% for task in tasks %}
-			<tr>
+			{% if task['sold'] == 0 %}
+			<tr {% if task['progress'] > 90 and task['status'] == 0%} style="background-color:#68ff8e" {% endif %}>
 				<td>{{task['title']}}</td>
+				<td>{{task['value']}} ,-</td>
+				<td>{{task['reach']}}</td>
 				<td>{{task['progress']}} %</td>
+
+					{% if task['status'] == 0 %}
+						<td><a href="/promoteTask/{{task['id']}}"><button class="btn btn-sm btn-secondary" type="button"> Promovér </button></a></td>
+					{% else %}
+						<td><a href="/sellTask/{{task['id']}}"><button class="btn btn-sm btn-secondary" type="button"> Sælg </button></a></td>
+					{% endif %}
+
 			</tr>
+			{% endif %}
 			{% endfor %}
 		</table>
 		<br>
 		<a href="/createTask">
-		<button type="button" name="button" class="btn btn-secondary btn-sm">Ny opgave</button>
+		<button type="button" name="button" class="btn btn-primary btn-sm">Nyt projekt</button>
+		</a>
+		<a href="/contractWork">
+		<button type="button" name="button" class="btn btn-primary btn-sm">Forespørgelser</button>
 		</a>
 
 	</div>
-	<div class="col-sm-1 col-md-6">
-		<img src="https://www.welovesolo.com/wp-content/uploads/ui/42/p18802qt7o1vle1nuia451ds48cf5-details.jpg" width="500px">
-	</div>
+	<!-- <div class="col-sm-1 col-md-6">
+		 <img src="https://www.welovesolo.com/wp-content/uploads/ui/42/p18802qt7o1vle1nuia451ds48cf5-details.jpg" width="500px">
+	</div> -->
 	<div class="col-sm-2 col-md-3">
 		<small>Ansatte</small>
 		<table class="table-sm table-striped" style="width:200px;">
@@ -57,6 +71,7 @@
 
 	</div>
 </div>
+<br>
 </div>
 
 

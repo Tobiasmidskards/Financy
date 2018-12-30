@@ -3,6 +3,10 @@ from flask_mysqldb import MySQL
 from passlib.hash import sha256_crypt
 from functools import wraps
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators, IntegerField, DecimalField, SelectField
+import random
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
+import math
 
 app = Flask(__name__)
 
@@ -17,6 +21,8 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 # init MySQL
 
 mysql = MySQL(app)
+scheduler = BackgroundScheduler()
+
 
 class RegisterForm(Form):
 	name = StringField('Navn', [validators.Length(min=1,max=50)])
@@ -28,6 +34,15 @@ class RegisterForm(Form):
 	])
 	confirm = PasswordField('Gentag Password')
 	companyname = StringField('Firmanavn', [validators.Length(min=3, max=50)])
+
+class createTaskForm(Form):
+	taskname = StringField('Produktnavn', [validators.Length(min=1, max=50)])
+	choices = [('audio','Lyd'),('system','System'),('3d','3D')]
+	type = SelectField('Type', choices=choices)
+	retail = IntegerField('Butikspris')
+	choices = [('1','Nem'),('2','Medium'),('3','Svær')]
+	niveau = SelectField('Niveau', choices=choices)
+
 
 def is_logged_in(f):
 	@wraps(f)
@@ -44,7 +59,7 @@ def is_logged_in(f):
 def logout():
 	session.clear()
 	flash('Du er nu logged ud', 'success')
-	return redirect(url_for('login'))
+	return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -141,22 +156,127 @@ def getTasks(uid):
 	cur.close()
 	return tasks
 
+def calculateCost(niveau, retail):
+	cost = niveau*(retail**4)
+	return cost
+
 @app.route('/office/<uid>')
 @is_logged_in
 def office(uid):
 	cur = mysql.connection.cursor()
 	cur.execute('SELECT * FROM company WHERE uid=%s', [uid])
 	company = cur.fetchone()
+	cur.close()
 	return render_template('office.html', company=company, tasks=getTasks(uid))
 
-@app.route('/createTask')
-def createTask():
+def updateTasks():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		result = cur.execute('SELECT * FROM tasks')
+		if result > 0:
+			tasks = cur.fetchall()
+			for task in tasks:
+				progress = int(task['progress'])
+				type = task['type']
+				niveau = int(task['niveau'])
+				potential = int(task['potential'])
+				reach = int(task['reach'])
+				retail = int(task['retail'])
+				status = int(task['status'])
+				quality = int(task['quality'])
+
+				if progress==0:
+					progress = 2
+
+				if (progress < 101 and progress > 0 and status == 0):
+					progress += potential*math.sqrt(progress)/niveau/24
+
+					if (progress > 99):
+						progress = 100
+
+					#value = niveau*(potential**2)*progress/(retail**3)
+					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',[str(progress) ,task['id']])
+					cur.connection.commit()
+				elif (progress < 101 and progress > 0 and status == 1):
+					progress += potential/niveau/12
+
+					if (progress > 99):
+						progress = 100
+
+					reach = niveau*(potential**3)*progress/(retail**2)*quality/100
+					value = reach*retail*quality/100
+					cur.execute('UPDATE tasks SET progress = %s, reach = %s, value = %s WHERE id = %s',[str(progress), str(reach), str(value) ,task['id']])
+					cur.connection.commit()
+				else:
+					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',["1" ,task['id']])
+					cur.connection.commit()
+		cur.close()
+
+def companyMoney(amount, method):
 	cur = mysql.connection.cursor()
-	cur.execute("INSERT INTO tasks(uid, title, progress) VALUES(%s,%s,%s)", [session['uid'], "title", "0"])
+	cur.execute('SELECT money FROM company WHERE uid = %s', [session['uid']])
+	money = cur.fetchone()
+	if method:
+		updatedMoney = money['money'] + amount
+	else:
+		updatedMoney = money['money'] - amount
+	cur.execute('UPDATE company SET money = %s WHERE uid = %s', [updatedMoney, session['uid']])
 	cur.connection.commit()
 	cur.close()
-	return render_template('createtask.html')
+
+@app.route('/promoteTask/<taskid>')
+def promoteTask(taskid):
+	cur = mysql.connection.cursor()
+	cur.execute('SELECT progress FROM tasks WHERE id = %s', [taskid])
+	quality = cur.fetchone()
+	cur.execute('UPDATE tasks SET status = %s, progress = %s, quality = %s WHERE id = %s', ["1", "0", str(quality['progress']), taskid])
+	cur.connection.commit()
+	cur.close()
+	return redirect(url_for('office', uid=session['uid']))
+
+@app.route('/sellTask/<taskid>')
+def sellTask(taskid):
+	cur = mysql.connection.cursor()
+	cur.execute('SELECT value FROM tasks WHERE id = %s', [taskid])
+	value = cur.fetchone()
+	cur.execute('SELECT money FROM company WHERE uid = %s', [session['uid']])
+	money = cur.fetchone()
+	companyMoney(value['value'],True)
+	cur.execute('UPDATE tasks SET sold = %s WHERE id = %s', ["1", taskid])
+	cur.connection.commit()
+	cur.close()
+	flash('Du har nu solgt dit produkt', 'success')
+	return redirect(url_for('office', uid=session['uid']))
+
+@app.route('/createTask', methods=['GET', 'POST'])
+def createTask():
+	form = createTaskForm(request.form)
+
+	if request.method == 'POST' and form.validate():
+		taskname = form.taskname.data
+		type = form.type.data
+		retail = form.retail.data
+		niveau = form.niveau.data
+		potential = random.randint(20,101)
+
+		cur = mysql.connection.cursor()
+		cur.execute("INSERT INTO tasks(uid, title, progress, value, type, retail, niveau, potential, status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+					[session['uid'], taskname, "0", "0", type, str(retail), str(niveau), potential, "0"])
+
+		cur.connection.commit()
+		cur.close()
+		flash('Din opgave er sat i værk!', 'success')
+		return redirect(url_for('office', uid=session['uid']))
+
+
+	return render_template('createtask.html', form=form)
+
+
+scheduler.add_job(func=updateTasks, trigger="interval", hours=1)
+scheduler.start()
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
-	app.run(debug='true', host='192.168.0.15')
+	app.run( host='192.168.0.15')
+
+atexit.register(lambda: scheduler.shutdown())

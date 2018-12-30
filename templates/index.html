@@ -4,8 +4,27 @@
 
 <div class="jumbotron text-center">
 	<h1>Financy</h1>
+	<small>Driv din egen virksomhed!</small>
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				<p>Hyr arbejdere til at designe og udgive produkter.
+					Uddan dine ansatte for at sikre deres produktivitet og tilfredshed med jobbet.
+					Spil mod andre virksomheder af andre brugere.
+					Gå efter at blive den største spiller på markedet.
+					Køb og sælg aktier, for at sikre kapital.</p>
+			</div>
+
+		</div>
+
+	</div>
+
 	<hr>
 	{% if session.logged_in == NULL %}
+	<h4>Er du klar?</h4>
+	<h2>Kom igang nu!</h2>
+	<br>
+
 		<a class="btn btn-primary" href="/login">Login</a>
 		<a class="btn btn-secondary" href="/register">Opret bruger</a>
 	{% endif %}
