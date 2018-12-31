@@ -1,0 +1,27 @@
+{% extends 'layout.html' %}
+
+
+{% block body %}
+<div class="container">
+
+
+<a href="/createEmployee"><button type="button" class="btn btn-secondary" name="button">Hent nyuddannet</button></a>
+<hr>
+<table class="table table-sm table-striped rounded" style="">
+	<tr>
+		<td>Navn</td>
+		<td>Alder</td>
+		<td>Lønkrav</td>
+		<td>Stats</td>
+	</tr>
+	{% for employee in employees %}
+	<tr>
+		<td><a href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
+		<td>{{employee.year}}</td>
+		<td>{{employee.salary}} kr/dag</td>
+		<td>{{employee.sum}}</td>
+	</tr>
+	{% endfor %}
+</table>
+</div>
+{% endblock %}

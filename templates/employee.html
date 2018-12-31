@@ -1,0 +1,84 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<div class="container">
+
+	<h2>Overblik</h2>
+	{% if employee.companyid == -1 %}
+	<a href="/hire/{{employee.id}}"><button type="button" class="btn btn-sm" name="button">Ansæt</button></a>
+	{% endif %}
+<hr>
+	<div class="row">
+		<div class="col">
+			<h2>{{companyname.companyname}}</h2>
+		</div>
+		<div class="col">
+			<small>Navn</small>
+			<p>{{employee.firstname}} {{employee.lastname}}</p>
+		</div>
+		<div class="col">
+			<small>Alder</small>
+			<p>{{employee.year}} år og {{employee.day}} dage</p>
+		</div>
+		<div class="col">
+			<small>Land</small>
+			<p>{{employee.country}}</p>
+		</div>
+	</div>
+	<br>
+	<div class="row">
+		<div class="col">
+			<h3>Egenskaber</h3>
+		</div>
+		<div class="col">
+			<small>Frontend</small>
+			<p>{{employee.frontend}}</p>
+		</div>
+		<div class="col">
+			<small>Backend</small>
+			<p>{{employee.backend}}</p>
+		</div>
+		<div class="col">
+			<small>Marketing</small>
+			<p>{{employee.marketing}}</p>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col">
+			<h5>Speciale</h5>
+		</div>
+		<div class="col">
+			<small>Lyd</small>
+			<p>{{employee.frontend}}</p>
+		</div>
+		<div class="col">
+			<small>Grafik</small>
+			<p>{{employee.graphic}}</p>
+		</div>
+		<div class="col">
+			<small>System</small>
+			<p>{{employee.system}}</p>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col">
+
+		</div>
+		<div class="col">
+			<small>Opdaget af.</small>
+			<p>{{companyname.discoveredby}}</p>
+		</div>
+		<div class="col">
+			<small>Løn/dag</small>
+			<p>{{employee.salary}} kr</p>
+		</div>
+		<div class="col">
+			<small>Sum</small>
+			<p>{{employee.sum}}</p>
+		</div>
+	</div>
+
+</div>
+
+{% endblock %}

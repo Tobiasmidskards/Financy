@@ -14,12 +14,37 @@
 		<p><b>{{company['companyname']}}</b></p>
 	</div>
 	<div class="col-sm-1 col-md-3">
-		<small>CEO</small>
-		<p>{{session.name}}</p>
+		<div class="row">
+			<div class="col">
+				<small>CEO</small>
+				<p>{{session.name}}</p>
+			</div>
+
+		</div>
+		<div class="row">
+			<div class="col">
+				<small>Kontorniveau</small>
+				<p>{{company['office']}}/10</p>
+			</div>
+
+		</div>
 	</div>
 	<div class="col-sm-1 col-md-3">
-		<small>Midler</small>
-		<p><b>{{company['money']}}</b> ,-</p>
+		<div class="row">
+			<div class="col">
+				<small>Midler</small>
+				<p><b>{{company['money']}}</b> ,-</p>
+			</div>
+
+		</div>
+		<div class="row">
+			<div class="col">
+				<small>Uddannelse</small>
+				<p>{{company['education']}}/10</p>
+			</div>
+
+		</div>
+
 	</div>
 
 </div>
@@ -28,7 +53,15 @@
 	<div class="col-sm-2 col-md-9">
 
 		<small>Opgaver</small>
-		<table class="table-sm table-striped" style="">
+		<table class="table table-sm table-striped table-dark rounded" style="">
+		<tr>
+			<th>Navn</th>
+			<th>Værdi</th>
+			<th>Reach</th>
+			<th></th>
+			<th></th>
+		</tr>
+
 			{% for task in tasks %}
 			{% if task['sold'] == 0 %}
 			<tr {% if task['progress'] > 90 and task['status'] == 0%} style="background-color:#68ff8e" {% endif %}>
@@ -62,9 +95,10 @@
 	<div class="col-sm-2 col-md-3">
 		<small>Ansatte</small>
 		<table class="table-sm table-striped" style="width:200px;">
-			{% for i in range(0,5) %}
+			{% for employee in stab %}
 			<tr>
-				<td>-</td>
+				<td><a href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
+				<td>{{employee.sum}}</td>
 			</tr>
 			{% endfor %}
 		</table>

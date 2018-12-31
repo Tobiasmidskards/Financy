@@ -43,6 +43,9 @@ class createTaskForm(Form):
 	choices = [('1','Nem'),('2','Medium'),('3','Svær')]
 	niveau = SelectField('Niveau', choices=choices)
 
+class newEmployeeForm(Form):
+	firstname = StringField('Navn', [validators.Length(min=2, max=10)])
+	lastname = StringField('Efternavn', [validators.Length(min=2, max=10)])
 
 def is_logged_in(f):
 	@wraps(f)
@@ -160,14 +163,113 @@ def calculateCost(niveau, retail):
 	cost = niveau*(retail**4)
 	return cost
 
+@app.route('/hire/<employeeid>')
+def hire(employeeid):
+	cur = mysql.connection.cursor()
+	cur.execute('UPDATE employee SET companyid = %s WHERE id = %s',[session['uid'] , employeeid])
+	cur.connection.commit()
+	cur.close()
+	return redirect(url_for('employee', employeeid=employeeid))
+
+
+@app.route('/createEmployee', methods=['GET', 'POST'])
+def createEmployee():
+	form = newEmployeeForm(request.form)
+
+	if request.method == 'POST' and form.validate():
+		firstname = form.firstname.data
+		lastname = form.lastname.data
+		cur = mysql.connection.cursor()
+
+		potential = str(random.randint(10,101))
+
+		cur.execute('INSERT INTO employee(firstname, lastname, potential, discoveredby) VALUES(%s, %s, %s, %s)', [firstname, lastname, potential, session['uid']])
+		cur.connection.commit()
+		cur.execute('SELECT LAST_INSERT_ID() as id')
+		id = cur.fetchone()
+		cur.close()
+		return redirect(url_for('employee', employeeid=id['id']))
+
+	return render_template('createEmployee.html', form=form)
+
+@app.route('/employees')
+def employees():
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM employee WHERE companyid = %s', ["-1"])
+	if result > 0:
+		employees = cur.fetchall()
+		for employee in employees:
+			employee['sum'] = getStatsSum(employee)
+		cur.close()
+		return render_template('employees.html', employees=employees)
+	cur.close()
+	return render_template('employees.html')
+
+@app.route('/employee/<employeeid>')
+def employee(employeeid):
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM employee WHERE id = %s',[employeeid])
+	if result > 0:
+		employee = cur.fetchone()
+
+		employee['sum'] = getStatsSum(employee)
+
+		companyname = {}
+		if employee['companyid'] != -1:
+			cur.execute("SELECT companyname FROM company WHERE uid = %s", [employee['companyid']])
+			companyname = cur.fetchone()
+		else:
+			companyname['companyname'] = "Arbejdsløs"
+
+		cur.execute("SELECT companyname FROM company WHERE uid = %s", [employee['discoveredby']])
+		discoveredby = cur.fetchone()
+
+		companyname['discoveredby'] = discoveredby['companyname']
+
+		cur.close()
+		return render_template('employee.html', employee=employee, companyname=companyname)
+	cur.close()
+
 @app.route('/office/<uid>')
 @is_logged_in
 def office(uid):
 	cur = mysql.connection.cursor()
-	cur.execute('SELECT * FROM company WHERE uid=%s', [uid])
-	company = cur.fetchone()
+	result = cur.execute('SELECT * FROM company WHERE uid=%s', [uid])
+	if result > 0:
+		company = cur.fetchone()
+		cur.close()
+		if company['uid'] == session['uid']:
+			return render_template('office.html', company=company, tasks=getTasks(uid), stab=getStab(uid))
 	cur.close()
-	return render_template('office.html', company=company, tasks=getTasks(uid))
+	return redirect(url_for('index'))
+
+def getStatsSum(employee):
+	sum = int(employee['audio']) + int(employee['system']) + int(employee['graphic'])
+	sum += int(employee['frontend']) + int(employee['backend']) + int(employee['marketing'])
+	return str(sum)
+
+def getStab(companyid):
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM employee WHERE companyid = %s',[companyid])
+	if result > 0:
+		employees = cur.fetchall()
+		for employee in employees:
+			employee['sum'] = getStatsSum(employee)
+		cur.close()
+		return employees
+	cur.close()
+	return {}
+
+def getStabSum(companyid):
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM employee WHERE companyid = %s',[companyid])
+	sum = 0
+	if result > 0:
+		employees = cur.fetchall()
+		for employee in employees:
+			sum += int(getStatsSum(employee))
+	cur.close()
+	return sum
 
 def updateTasks():
 	with app.app_context():
@@ -184,12 +286,20 @@ def updateTasks():
 				retail = int(task['retail'])
 				status = int(task['status'])
 				quality = int(task['quality'])
+				userid = int(task['uid'])
 
 				if progress==0:
 					progress = 2
 
 				if (progress < 101 and progress > 0 and status == 0):
-					progress += potential*math.sqrt(progress)/niveau/24
+
+					stabforce = getStabSum(userid)
+					if stabforce == 0:
+						stabforce = 10
+
+					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
+					print(delta)
+					progress += delta
 
 					if (progress > 99):
 						progress = 100
@@ -198,7 +308,11 @@ def updateTasks():
 					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',[str(progress) ,task['id']])
 					cur.connection.commit()
 				elif (progress < 101 and progress > 0 and status == 1):
-					progress += potential/niveau/12
+					stabforce = getStabSum(userid)
+					if stabforce == 0:
+						stabforce = 10
+					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
+					progress += delta
 
 					if (progress > 99):
 						progress = 100
@@ -212,17 +326,27 @@ def updateTasks():
 					cur.connection.commit()
 		cur.close()
 
-def companyMoney(amount, method):
+def companyMoney(amount, method, uid = "default"):
+	if uid is "default":
+		uid = session['uid']
+
 	cur = mysql.connection.cursor()
-	cur.execute('SELECT money FROM company WHERE uid = %s', [session['uid']])
+	cur.execute('SELECT money FROM company WHERE uid = %s', [uid])
 	money = cur.fetchone()
+
 	if method:
 		updatedMoney = money['money'] + amount
 	else:
 		updatedMoney = money['money'] - amount
-	cur.execute('UPDATE company SET money = %s WHERE uid = %s', [updatedMoney, session['uid']])
+
+	if updatedMoney < 0:
+		flash('Du har ikke råd!', 'danger')
+		return False
+
+	cur.execute('UPDATE company SET money = %s WHERE uid = %s', [updatedMoney, uid])
 	cur.connection.commit()
 	cur.close()
+	return True
 
 @app.route('/promoteTask/<taskid>')
 def promoteTask(taskid):
@@ -259,24 +383,67 @@ def createTask():
 		niveau = form.niveau.data
 		potential = random.randint(20,101)
 
-		cur = mysql.connection.cursor()
-		cur.execute("INSERT INTO tasks(uid, title, progress, value, type, retail, niveau, potential, status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-					[session['uid'], taskname, "0", "0", type, str(retail), str(niveau), potential, "0"])
+		if companyMoney(100000,False):
+			cur = mysql.connection.cursor()
+			cur.execute("INSERT INTO tasks(uid, title, progress, value, type, retail, niveau, potential, status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+						[session['uid'], taskname, "0", "0", type, str(retail), str(niveau), potential, "0"])
 
-		cur.connection.commit()
-		cur.close()
-		flash('Din opgave er sat i værk!', 'success')
-		return redirect(url_for('office', uid=session['uid']))
+			cur.connection.commit()
+			cur.close()
+
+			flash('Din opgave er sat i værk!', 'success')
+			return redirect(url_for('office', uid=session['uid']))
 
 
 	return render_template('createtask.html', form=form)
 
+def paySalary():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		cur.execute("SELECT companyid, salary FROM employee")
+		employees = cur.fetchall()
 
-scheduler.add_job(func=updateTasks, trigger="interval", hours=1)
+		for employee in employees:
+			if employee['companyid'] != -1:
+				cur.execute("SELECT money FROM company WHERE uid = %s", [employee['companyid']])
+				money = cur.fetchone()
+				money = money['money'] - employee['salary']
+				cur.execute("UPDATE company SET money = %s WHERE uid = %s", [money, employee['companyid']])
+				cur.connection.commit()
+		cur.close()
+
+
+def newDay():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		result = cur.execute('SELECT id, year, day FROM employee')
+		if result > 0:
+			employees = cur.fetchall()
+			for employee in employees:
+				year = int(employee['year'])
+				day = int(employee['day'])
+				if day > 29:
+					day = 0
+					year = year + 1
+				else:
+					day = day + 1
+				cur.execute("UPDATE employee SET year = %s, day = %s WHERE id = %s", [str(year), str(day), employee['id']])
+				cur.connection.commit()
+		cur.close()
+
+#def test():
+	#paySalary()
+	#newDay()
+	#updateTasks()
+
+scheduler.add_job(paySalary, 'cron', hour=0)
+scheduler.add_job(newDay, 'cron', hour=0)
+scheduler.add_job(updateTasks, 'cron', hour='0-23', minute=30)
 scheduler.start()
+
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
-	app.run( host='192.168.0.15')
+	app.run(host='192.168.0.15')
 
 atexit.register(lambda: scheduler.shutdown())
