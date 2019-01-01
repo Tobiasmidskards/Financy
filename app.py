@@ -107,7 +107,7 @@ def login():
 
 def createNewCompany(userid, companyname):
 	cur = mysql.connection.cursor()
-	cur.execute('INSERT INTO company(uid, companyname, money) VALUES(%s, %s, %s)', [userid, companyname, "50000"])
+	cur.execute('INSERT INTO company(uid, companyname) VALUES(%s, %s)', [userid, companyname])
 	cur.connection.commit()
 	cur.close()
 
@@ -239,6 +239,7 @@ def office(uid):
 		company = cur.fetchone()
 		cur.close()
 		if company['uid'] == session['uid']:
+			cur.close()
 			return render_template('office.html', company=company, tasks=getTasks(uid), stab=getStab(uid))
 	cur.close()
 	return redirect(url_for('index'))
@@ -271,60 +272,6 @@ def getStabSum(companyid):
 	cur.close()
 	return sum
 
-def updateTasks():
-	with app.app_context():
-		cur = mysql.connection.cursor()
-		result = cur.execute('SELECT * FROM tasks')
-		if result > 0:
-			tasks = cur.fetchall()
-			for task in tasks:
-				progress = int(task['progress'])
-				type = task['type']
-				niveau = int(task['niveau'])
-				potential = int(task['potential'])
-				reach = int(task['reach'])
-				retail = int(task['retail'])
-				status = int(task['status'])
-				quality = int(task['quality'])
-				userid = int(task['uid'])
-
-				if progress==0:
-					progress = 2
-
-				if (progress < 101 and progress > 0 and status == 0):
-
-					stabforce = getStabSum(userid)
-					if stabforce == 0:
-						stabforce = 10
-
-					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
-					print(delta)
-					progress += delta
-
-					if (progress > 99):
-						progress = 100
-
-					#value = niveau*(potential**2)*progress/(retail**3)
-					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',[str(progress) ,task['id']])
-					cur.connection.commit()
-				elif (progress < 101 and progress > 0 and status == 1):
-					stabforce = getStabSum(userid)
-					if stabforce == 0:
-						stabforce = 10
-					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
-					progress += delta
-
-					if (progress > 99):
-						progress = 100
-
-					reach = niveau*(potential**3)*progress/(retail**2)*quality/100
-					value = reach*retail*quality/100
-					cur.execute('UPDATE tasks SET progress = %s, reach = %s, value = %s WHERE id = %s',[str(progress), str(reach), str(value) ,task['id']])
-					cur.connection.commit()
-				else:
-					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',["1" ,task['id']])
-					cur.connection.commit()
-		cur.close()
 
 def companyMoney(amount, method, uid = "default"):
 	if uid is "default":
@@ -341,6 +288,7 @@ def companyMoney(amount, method, uid = "default"):
 
 	if updatedMoney < 0:
 		flash('Du har ikke råd!', 'danger')
+		cur.close()
 		return False
 
 	cur.execute('UPDATE company SET money = %s WHERE uid = %s', [updatedMoney, uid])
@@ -397,6 +345,61 @@ def createTask():
 
 	return render_template('createtask.html', form=form)
 
+def updateTasks():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		result = cur.execute('SELECT * FROM tasks')
+		if result > 0:
+			tasks = cur.fetchall()
+			for task in tasks:
+				progress = int(task['progress'])
+				type = task['type']
+				niveau = int(task['niveau'])
+				potential = int(task['potential'])
+				reach = int(task['reach'])
+				retail = int(task['retail'])
+				status = int(task['status'])
+				quality = int(task['quality'])
+				userid = int(task['uid'])
+
+				if progress==0:
+					progress = 2
+
+				if (progress < 101 and progress > 0 and status == 0):
+
+					stabforce = getStabSum(userid)
+					if stabforce == 0:
+						stabforce = 10
+
+					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
+					print(delta)
+					progress += delta
+
+					if (progress > 99):
+						progress = 100
+
+					#value = niveau*(potential**2)*progress/(retail**3)
+					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',[str(progress) ,task['id']])
+					cur.connection.commit()
+				elif (progress < 101 and progress > 0 and status == 1):
+					stabforce = getStabSum(userid)
+					if stabforce == 0:
+						stabforce = 10
+					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
+					progress += delta
+
+					if (progress > 99):
+						progress = 100
+
+					reach = niveau*(potential**3)*progress/(retail**2)*quality/100
+					value = reach*retail*quality/100
+					cur.execute('UPDATE tasks SET progress = %s, reach = %s, value = %s WHERE id = %s',[str(progress), str(reach), str(value) ,task['id']])
+					cur.connection.commit()
+				else:
+					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',["1" ,task['id']])
+					cur.connection.commit()
+		cur.close()
+
 def paySalary():
 	with app.app_context():
 		cur = mysql.connection.cursor()
@@ -438,12 +441,12 @@ def newDay():
 
 scheduler.add_job(paySalary, 'cron', hour=0)
 scheduler.add_job(newDay, 'cron', hour=0)
-scheduler.add_job(updateTasks, 'cron', hour='0-23', minute=30)
+scheduler.add_job(updateTasks, 'cron', hour='0-23', minute='0,30')
 scheduler.start()
 
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
-	app.run(host='192.168.0.15')
+	app.run(host='192.168.0.15', threaded=True)
 
 atexit.register(lambda: scheduler.shutdown())
