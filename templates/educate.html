@@ -1,0 +1,53 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="container">
+	<div class="row">
+		<div class="col-sm-8">
+			<h1>Hold dit daglige foredrag</h1>
+			<p>For hvert foredrag, vil dine ansattes egenskaber stige. Jo højere uddannelsesfacilitet dit firma har, desto mere stiger dine ansatte.</p>
+			<small>Nogle ansatte har et højere potentiale og vil derfor stige mere i egenskaber.</small>
+		</div>
+		<div class="col-sm-4">
+			<a href="#"><button type="button" class="btn btn-secondary float-right" name="button">Opgradér facilitet</button></a>
+		</div>
+	</div>
+	<hr>
+	<div class="row">
+		<div class="col">
+			<form  method="POST">
+				<button type="submit" name="button" class="btn btn-primary">Kom igang</button>
+			</form>
+		</div>
+	</div>
+	<br>
+	<div class="row">
+		<div class="col-sm-12">
+
+	{% if employees != Null %}
+
+		<table class="table table-sm table-striped">
+			<thead>
+			<tr>
+				<td>Navn</td>
+				<td>Koncentration</td>
+				<td>+Total</td>
+			</tr>
+			</thead>
+			<tbody>
+			{% for employee in employees %}
+			<tr>
+				<td><a href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
+				<td>{{employee.concentration}} %</td>
+				<td>{{employee.total}}</td>
+			</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+
+
+	{% endif %}
+</div>
+</div>
+</div>
+{% endblock %}

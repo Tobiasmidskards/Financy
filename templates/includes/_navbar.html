@@ -1,6 +1,6 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-  <a class="navbar-brand" href="/">Financy</a>
+  <a class="navbar-brand" href="/"><i style="font-size:18px" class="fa fa-area-chart"></i> Financy</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -14,18 +14,26 @@
 				<a class="nav-link" href="/employees">Arbejdere<span class="sr-only">(current)</span></a>
 			</li>
 			<li class="nav-item">
-				<a class="nav-link" href="/">Markedet<span class="sr-only">(current)</span></a>
+				<a class="nav-link" href="/market">Markedet<span class="sr-only">(current)</span></a>
 			</li>
 			<li class="nav-item">
 				<a class="nav-link" href="/">Finansiering<span class="sr-only">(current)</span></a>
 			</li>
 			{% endif %}
+
     </ul>
 
 		<div class="collapse navbar-collapse" id="navbarNav">
 
 		</div>
 		<ul class="navbar-nav">
+			<li class="nav-item">
+				<a class="nav-link disabled" href="#"><small>aplha, patch 0.86</small><span class="sr-only">(current)</span></a>
+			</li>
+
+			<li class="nav-item">
+				<a class="nav-link" href="/faq">FAQ<span class="sr-only">(current)</span></a>
+			</li>
 			{% if session.logged_in %}
 				<li class="nav-item"><a class="nav-link" href="/logout">Log ud</a></li>
 			{% else %}

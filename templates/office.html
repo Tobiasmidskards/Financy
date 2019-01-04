@@ -2,29 +2,54 @@
 
 {% block body %}
 
-<div class="container dark">
 
 
+
+<div class="container">
+	{% if company.uid == session.uid %}
+
+<div class="row">
+	<div class="col-sm-10">
+		<small>Midler</small>
+		<p><b>{{company.money}}</b> ,-</p>
+	</div>
+	<div class="col-sm-2">
+		<a class="nav-link"  href="/createEmployee"><button class="btn btn-primary btn-sm" type="button" name="button">Headhunt</button></a>
+	</div>
+
+</div>
+	{% endif %}
+
+<hr>
 <div class="row" >
 	<div class="col-sm-2 col-md-3">
-		<img src="https://www.dolphinwear.com/img/default-product.jpg" width="200px">
+		<img src="https://www.dolphinwear.com/img/default-product.jpg" width="100%">
 	</div>
 	<div class="col-sm-1 col-md-3">
 		<small>Firma</small>
 		<p><b>{{company['companyname']}}</b></p>
+
 	</div>
 	<div class="col-sm-1 col-md-3">
 		<div class="row">
 			<div class="col">
 				<small>CEO</small>
-				<p>{{session.name}}</p>
+				<p>{{company.ceo}}</p>
 			</div>
 
 		</div>
 		<div class="row">
 			<div class="col">
-				<small>Kontorniveau</small>
-				<p>{{company['office']}}/10</p>
+				<small>
+					Kontor ({{company['office']}}/10)
+					{% if company.uid == session.uid %}
+					<a href="/upgradeOffice">
+						<i style="color:white;" class="fas fa-angle-up"></i>
+				 	</a>
+					{% endif %}
+				</small>
+				<p>{{{1:"Garage"}[company.office]}}</p>
+
 			</div>
 
 		</div>
@@ -32,15 +57,22 @@
 	<div class="col-sm-1 col-md-3">
 		<div class="row">
 			<div class="col">
-				<small>Midler</small>
-				<p><b>{{company['money']}}</b> ,-</p>
+				<small>Fans</small>
+				<p><b>{{company['fans']}}</b></p>
 			</div>
 
 		</div>
 		<div class="row">
 			<div class="col">
-				<small>Uddannelse</small>
-				<p>{{company['education']}}/10</p>
+				<small>
+					Uddannelse ({{company['education']}}/10)
+					{% if company.uid == session.uid %}
+					<a href="/upgradeEducation">
+						<i style="color:white;" class="fas fa-angle-up"></i>
+					</a>
+					{% endif %}
+				</small>
+				<p>{{{1:"Selvstudie"}[company.education]}}</p>
 			</div>
 
 		</div>
@@ -48,65 +80,170 @@
 	</div>
 
 </div>
+
+
+
 <hr>
 <div class="row">
-	<div class="col-sm-2 col-md-9">
+	<div class="col-sm-9">
 
-		<small>Opgaver</small>
+		<small>Udvikling</small>
 		<table class="table table-sm table-striped table-dark rounded" style="">
 		<tr>
 			<th>Navn</th>
-			<th>Værdi</th>
-			<th>Reach</th>
+			<th>Fremskridt</th>
+			{% if company.uid == session.uid %}
 			<th></th>
-			<th></th>
+			{% endif %}
+
 		</tr>
 
 			{% for task in tasks %}
-			{% if task['sold'] == 0 %}
-			<tr {% if task['progress'] > 90 and task['status'] == 0%} style="background-color:#68ff8e" {% endif %}>
+			{% if task['sold'] == 0 and task.status == 0%}
+			<tr>
 				<td>{{task['title']}}</td>
-				<td>{{task['value']}} ,-</td>
-				<td>{{task['reach']}}</td>
-				<td>{{task['progress']}} %</td>
+				<td>
+						<p style = "color: {% if task.progress < 80 %} red; {% else %} green; {% endif %}">{{task.progress}} %</p>
+				</td>
 
-					{% if task['status'] == 0 %}
-						<td><a href="/promoteTask/{{task['id']}}"><button class="btn btn-sm btn-secondary" type="button"> Promovér </button></a></td>
-					{% else %}
-						<td><a href="/sellTask/{{task['id']}}"><button class="btn btn-sm btn-secondary" type="button"> Sælg </button></a></td>
-					{% endif %}
+				{% if company.uid == session.uid %}
+						<td><a href="/promoteTask/{{task['id']}}"><button class="btn btn-sm {% if task['progress'] > 90 %} btn-success {% else %} btn-secondary {% endif %}" type="button"> Promovér </button></a></td>
+				{% endif %}
 
 			</tr>
 			{% endif %}
 			{% endfor %}
 		</table>
 		<br>
+
+		<small>Marketing</small>
+		<table class="table table-sm table-striped table-dark rounded" style="">
+		<tr>
+			<th>Navn</th>
+			<th>Kvalitet</th>
+			<th>Reach</th>
+			<th>Fremskridt</th>
+			{% if company.uid == session.uid %}
+			<th></th>
+			{% endif %}
+
+		</tr>
+
+			{% for task in tasks %}
+			{% if task['sold'] == 0 and task.status == 1%}
+			<tr>
+				<td>{{task['title']}}</td>
+				<td>{{task.quality}} %</td>
+				<td>{{task['reach']}}</td>
+				<td>
+					<p style = "color: {% if task.progress < 80 %} red; {% else %} green; {% endif %}">{{task.progress}} %</p>
+				</td>
+
+
+				{% if company.uid == session.uid %}
+						<td><a href="/sellTask/{{task['id']}}"><button class="btn btn-sm {% if task['progress'] > 90 %} btn-success {% else %} btn-secondary {% endif %}" type="button"> Færdiggør </button></a></td>
+				{% endif %}
+
+			</tr>
+			{% endif %}
+			{% endfor %}
+		</table>
+		<br>
+		</div>
+		<div class="col-sm-3">
+			<small>Ansatte</small>
+			<table class="table table-sm table-striped table-dark rounded" style="width:100%;">
+				{% for employee in stab %}
+				<tr>
+					<td><a style="" href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
+					<td>{{employee.sum}}</td>
+				</tr>
+				{% endfor %}
+			</table>
+			{% if company.uid == session.uid %}
+			<br>
+			<a href="/educate"><button class="btn btn-sm btn-primary" type="button" name="button">Hold Foredrag</button></a>
+			{% endif %}
+			<br>
+		</div>
+
+		</div>
+		<br>
+		<div class="row">
+			<div class="col-sm-12 col-md-12">
+
+
+
+		<small>Salg</small>
+		<table class="table table-sm table-striped table-dark rounded">
+		<tr>
+			<th>Navn</th>
+			<th>Potentiale</th>
+			<th>Salgpris</th>
+			<th>Målgruppe</th>
+			<th>På lager</th>
+			<th>Fortjeneste</th>
+			<th>ca. indtjening/dag</th>
+			{% if company.uid == session.uid %}
+			<th></th>
+			<th></th>
+			{% endif %}
+
+		</tr>
+
+			{% for task in tasks %}
+			{% if task['sold'] == 0 and task.status == 2%}
+			<tr>
+				<td>{{task['title']}}</td>
+				<td>{{task.potential}}</td>
+				<td>{{task.retail}}</td>
+				<td>{{task['reach']}}</td>
+				<td>
+					<p style = "color: {% if task.copies < 50 %} red; {% else %} black; {% endif %}">{{task.copies}}</p>
+				</td>
+				<td>{{task['value']}} ,-</td>
+				<td>{{task.daily}}</td>
+
+				{% if company.uid == session.uid %}
+						<td><a href="/copies/{{task['id']}}"><button class="btn btn-sm btn-primary" type="button">Producér</button></a></td>
+						<td><a href="/cancelTask/{{task['id']}}"><button class="btn btn-sm btn-danger" type="button">Nedlæg</button></a></td>
+				{% endif %}
+
+			</tr>
+			{% endif %}
+			{% endfor %}
+		</table>
+		<br>
+
+		{% if company.uid == session.uid %}
 		<a href="/createTask">
 		<button type="button" name="button" class="btn btn-primary btn-sm">Nyt projekt</button>
 		</a>
 		<a href="/contractWork">
 		<button type="button" name="button" class="btn btn-primary btn-sm">Forespørgelser</button>
 		</a>
+		{% endif %}
 
 	</div>
-	<!-- <div class="col-sm-1 col-md-6">
-		 <img src="https://www.welovesolo.com/wp-content/uploads/ui/42/p18802qt7o1vle1nuia451ds48cf5-details.jpg" width="500px">
-	</div> -->
-	<div class="col-sm-2 col-md-3">
-		<small>Ansatte</small>
-		<table class="table-sm table-striped" style="width:200px;">
-			{% for employee in stab %}
-			<tr>
-				<td><a href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
-				<td>{{employee.sum}}</td>
-			</tr>
-			{% endfor %}
-		</table>
-
-	</div>
+</div>
 </div>
 <br>
-</div>
+<br>
+<br>
+
+<style>
+
+th:last-child,
+td:last-child {
+    text-align: right;
+}
+
+body{
+	background-color:#393f47;
+	color:white;
+}
+
+</style>
 
 
 {% endblock %}

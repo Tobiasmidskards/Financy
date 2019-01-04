@@ -4,10 +4,21 @@
 
 <div class="container">
 
-	<h2>Overblik</h2>
-	{% if employee.companyid == -1 %}
-	<a href="/hire/{{employee.id}}"><button type="button" class="btn btn-sm" name="button">Ansæt</button></a>
-	{% endif %}
+<div class="row">
+	<div class="col">
+		<h2>Overblik</h2>
+	</div>
+	<div class="col">
+		{% if employee.companyid == -1 %}
+		<a href="/hire/{{employee.id}}"><button type="button" class="btn btn-sm float-right" name="button">Ansæt medarbejder</button></a>
+		{% endif %}
+		{% if employee.companyid == session.uid %}
+		<a href="/fire/{{employee.id}}"><button type="button" class="btn btn-sm float-right" name="button">Fyr medarbejder</button></a>
+		{% endif %}
+	</div>
+</div>
+
+
 <hr>
 	<div class="row">
 		<div class="col">
@@ -50,7 +61,7 @@
 		</div>
 		<div class="col">
 			<small>Lyd</small>
-			<p>{{employee.frontend}}</p>
+			<p>{{employee.audio}}</p>
 		</div>
 		<div class="col">
 			<small>Grafik</small>
