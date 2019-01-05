@@ -3,11 +3,8 @@
 {% block body %}
 
 
-
-
 <div class="container">
 	{% if company.uid == session.uid %}
-
 <div class="row">
 	<div class="col-sm-10">
 		<small>Midler</small>
@@ -180,7 +177,7 @@
 			<th>Navn</th>
 			<th>Potentiale</th>
 			<th>Salgpris</th>
-			<th>Målgruppe</th>
+			<th>Reach</th>
 			<th>På lager</th>
 			<th>Fortjeneste</th>
 			<th>ca. indtjening/dag</th>
@@ -196,12 +193,14 @@
 			<tr>
 				<td>{{task['title']}}</td>
 				<td>{{task.potential}}</td>
-				<td>{{task.retail}}</td>
+				<td>{{task.retail}} ,-</td>
 				<td>{{task['reach']}}</td>
 				<td>
-					<p style = "color: {% if task.copies < 50 %} red; {% else %} black; {% endif %}">{{task.copies}}</p>
+					<p style = "color: {% if task.copies < 25 %} red; {% else %} green; {% endif %}">{{task.copies}}</p>
 				</td>
-				<td>{{task['value']}} ,-</td>
+				<td>
+					<p style = "color: {% if task.value <= 0 %} red; {% else %} green; {% endif %}">{{task['value']}} ,-</p>
+				</td>
 				<td>{{task.daily}}</td>
 
 				{% if company.uid == session.uid %}
@@ -236,11 +235,6 @@
 th:last-child,
 td:last-child {
     text-align: right;
-}
-
-body{
-	background-color:#393f47;
-	color:white;
 }
 
 </style>

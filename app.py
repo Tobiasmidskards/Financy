@@ -12,8 +12,8 @@ app = Flask(__name__)
 
 # config MySQL
 
-app.config['MYSQL_HOST'] = '192.168.0.30'
-app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'pi'
 app.config['MYSQL_PASSWORD'] = 'x'
 app.config['MYSQL_DB'] = 'financy'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
@@ -171,6 +171,7 @@ def calculateCost(niveau, retail):
 
 @app.route('/market')
 def market():
+	printUser()
 	company = {}
 	cur = mysql.connection.cursor()
 	cur.execute("SELECT * FROM company")
@@ -211,6 +212,28 @@ def fire(employeeid):
 	cur.close()
 	return redirect(url_for('employee', employeeid=employeeid))
 
+def createEmployees():
+	cur = mysql.connection.cursor()
+
+	first = ["Tobias", "Joakim", "Morten", "Frederik", "Lærke", "Mathilde", "Mads", "Villum", "Svend", "Ebbe", "Aske", "Jens", "Laust", "Søren", "William", "Oliver", "Victor", "Elias", "Valdemar", "Magnus", "Felix", "Nohr", "Alexander", "Liam", "Sebastian"]
+	last = ["Sørensen", "Madsen", "Ahmad", "Andersen", "Bach", "Bak", "Bruun", "Damgaard", "Eriksen", "Frederiksen", "Gade", "Frost", "Holm", "Friis", "Hoffman", "Iversen"]
+
+	for i in range(0,50):
+		potential = str(random.randint(10,101))
+
+		random1 = random.randint(0,len(first)-1)
+		random2 = random.randint(0,len(last)-1)
+
+		firstname = first[random1]
+		lastname = last[random2]
+		discoveredby = "13"
+
+		print(firstname, " ", lastname)
+
+		cur.execute('INSERT INTO employee(firstname, lastname, potential, discoveredby) VALUES(%s, %s, %s, %s)', [firstname, lastname, potential, session['uid']])
+		cur.connection.commit()
+
+	cur.close()
 
 @app.route('/createEmployee', methods=['GET', 'POST'])
 def createEmployee():
@@ -234,6 +257,7 @@ def createEmployee():
 
 @app.route('/employees')
 def employees():
+	printUser()
 	cur = mysql.connection.cursor()
 	result = cur.execute('SELECT * FROM employee WHERE companyid = %s', ["-1"])
 	if result > 0:
@@ -274,13 +298,38 @@ def employee(employeeid):
 @is_logged_in
 def office(uid):
 	cur = mysql.connection.cursor()
+	printUser()
 	result = cur.execute('SELECT * FROM company WHERE uid=%s', [uid])
 	if result > 0:
 		company = cur.fetchone()
 		cur.execute("SELECT name FROM user WHERE id = %s", [company['uid']])
 		company['ceo'] = cur.fetchone()['name']
 		cur.close()
-		return render_template('office.html', company=company, tasks=getTasks(uid), stab=getStab(uid))
+
+		copiesmsg, fansmsg, hypemsg = False, False, False
+
+		tasks = getTasks(uid)
+
+		for task in tasks:
+			if task['status'] == 2:
+				if task['copies'] == 0:
+					copiesmsg = True
+				if (task['quality'] < 50 or task['potential'] < 50) and company['fans'] < 200:
+					fansmsg = True
+				if task['hype'] < 0.3:
+					hypemsg = True
+				if hypemsg and session['uid'] == int(uid):
+					msg = "Kunderne har mistet interessen for {}. Nedlæg produktet.".format(task['title'])
+					flash(msg, 'danger')
+
+		if session['uid'] == int(uid):
+			if copiesmsg:
+				flash('Du har produkter som er udsolgt. Det bryder dine fans sig ikke om. Producér nogle flere eller nedlæg produkterne.', 'danger')
+			if fansmsg:
+				flash('Du sælger produkter med dårlig kvalitet eller potentiale. Det bryder dine fans sig ikke om. Nedlæg fiskoerne.', 'danger')
+
+
+		return render_template('office.html', company=company, tasks=tasks, stab=getStab(uid))
 	cur.close()
 	return redirect(url_for('index'))
 
@@ -338,6 +387,7 @@ def companyMoney(amount, method, uid = "default"):
 
 @app.route('/promoteTask/<taskid>')
 def promoteTask(taskid):
+	printUser()
 	cur = mysql.connection.cursor()
 	cur.execute('SELECT progress FROM tasks WHERE id = %s', [taskid])
 	quality = cur.fetchone()
@@ -348,8 +398,19 @@ def promoteTask(taskid):
 
 @app.route('/sellTask/<taskid>')
 def sellTask(taskid):
+	printUser()
 	cur = mysql.connection.cursor()
-	cur.execute('UPDATE tasks SET status = %s WHERE id = %s', ["2", taskid])
+
+	cur.execute('SELECT * FROM tasks')
+	task = cur.fetchone()
+
+	progress = task['progress']
+	potential = task['potential']
+	quality = task['quality']
+
+	hype = (potential+quality+progress)/3/100
+
+	cur.execute('UPDATE tasks SET status = %s, hype = %s WHERE id = %s', ["2", str(hype), taskid])
 	cur.connection.commit()
 	cur.close()
 	flash('Du har nu sendt dit produkt til produktion.', 'success')
@@ -357,6 +418,7 @@ def sellTask(taskid):
 
 @app.route('/createTask', methods=['GET', 'POST'])
 def createTask():
+	printUser()
 	form = createTaskForm(request.form)
 
 	if request.method == 'POST' and form.validate():
@@ -369,7 +431,7 @@ def createTask():
 		if companyMoney(100000,False):
 			cur = mysql.connection.cursor()
 			cur.execute("INSERT INTO tasks(uid, title, progress, value, type, retail, niveau, potential, status) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-						[session['uid'], taskname, "0", "0", type, str(retail), str(niveau), potential, "0"])
+						[session['uid'], taskname, "0", "-100000", type, str(retail), str(niveau), potential, "0"])
 
 			cur.connection.commit()
 			cur.close()
@@ -378,11 +440,12 @@ def createTask():
 			return redirect(url_for('office', uid=session['uid']))
 
 
-	return render_template('createtask.html', form=form)
+	return render_template('createTask.html', form=form)
 
 
 @app.route('/educate', methods=['GET', 'POST'])
 def educate():
+	printUser()
 	if request.method == 'POST':
 		cur = mysql.connection.cursor()
 		cur.execute("SELECT coursed FROM company WHERE uid = %s", [session['uid']])
@@ -452,6 +515,7 @@ def educate():
 
 @app.route('/cancelTask/<taskid>')
 def cancelTask(taskid):
+	printUser()
 	cur = mysql.connection.cursor()
 	cur.execute("UPDATE tasks SET status = %s WHERE id = %s", ["3", taskid])
 	cur.connection.commit()
@@ -461,6 +525,7 @@ def cancelTask(taskid):
 
 @app.route('/copies/<taskid>', methods=['GET', 'POST'])
 def copies(taskid):
+	printUser()
 
 	form = copiesForm(request.form)
 
@@ -529,9 +594,9 @@ def updateTasks(spec = 0):
 					if (progress > 99):
 						progress = 100
 
-					#value = niveau*(potential**2)*progress/(retail**3)
 					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',[str(progress) ,task['id']])
 					cur.connection.commit()
+
 				elif (progress < 101 and progress > 0 and status == 1):
 					stabforce = getStabSum(userid)
 					if stabforce == 0:
@@ -542,17 +607,18 @@ def updateTasks(spec = 0):
 					if (progress > 99):
 						progress = 100
 
-					#reach = niveau*(potential**3)*progress/(retail**2)*quality/100
 					hype = (potential+quality+progress)/3/100
-					reach = potential * hype * math.sqrt(fans*niveau+1)
+					reach = potential * hype * math.sqrt(fans*niveau+1)/((retail+1)/5)
+
 					cur.execute('UPDATE tasks SET progress = %s, reach = %s, hype = %s WHERE id = %s',[str(progress), str(reach), str(hype), task['id']])
 					cur.connection.commit()
 
 				elif (status == 2):
-					hype = hype * (random.randint(60,120)/100)
-					reach = potential * hype * math.sqrt(fans*niveau+1)
-					toSell = random.randint(5,(int(reach/10+6)))
-					#daily = (retail*toSell*((quality/100)+(math.sqrt(fans))))
+					hype = hype * (random.uniform(98.0,101.4)/100)
+					reach = potential * hype * math.sqrt(fans*niveau+1)/((retail+1)/5)
+
+					toSell = random.randint(5,(int(reach/4+6)))
+
 					daily = retail*toSell*46
 
 					copies = copies - toSell
@@ -567,14 +633,15 @@ def updateTasks(spec = 0):
 					if fans <= 10:
 						fans = 10
 
-					if quality > 50 and potential > 50:
-						fans = fans * (random.randint(95,115)/100)
+					if quality > random.randint(35,65) and potential > random.randint(35,65):
+						fans = fans * (random.randint(95,125)/100)
 					else:
-						fans = fans * 0.7
+						fans = fans * 0.85
+
 
 					cur.execute('UPDATE tasks SET hype = %s, copies = %s, reach = %s, daily = %s, value=%s WHERE id = %s', [str(hype), str(copies), str(reach), str(daily), str(value),task['id']])
 					cur.connection.commit()
-					print("Bruger: ", userid , " +", int(daily/48), " Opg: ", title)
+					print("Bruger: ", userid , " +", int(daily/48), " Opg: ", title, " Hype: ", hype)
 					companyMoney(int(daily/48), True, task['uid'])
 
 					cur.execute('UPDATE company SET fans = %s WHERE uid = %s', [str(fans), userid])
@@ -644,6 +711,7 @@ def test():
 	# newDay()
 	# paySalary()
 	#updateValuation()
+	#createEmployees()
 	return redirect(url_for('office', uid = session['uid']))
 
 def updateValuation():
@@ -679,10 +747,15 @@ def getValuation(uid):
 def faq():
 	return render_template('faq.html')
 
-# def test():
-# 	paySalary()
-# 	newDay()
-# 	updateTasks()
+
+def printUser():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		cur.execute("SELECT name FROM user WHERE id = %s", [session['uid']])
+		name = cur.fetchone()
+		name = name['name']
+		print(name)
+		cur.close()
 
 scheduler.add_job(updateValuation, 'cron', hour=0)
 scheduler.add_job(paySalary, 'cron', hour=0)
@@ -694,6 +767,6 @@ scheduler.start()
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
-	app.run(host='192.168.0.15', threaded=True)
+	app.run(host='192.168.0.30', threaded=True)
 
 atexit.register(lambda: scheduler.shutdown())
