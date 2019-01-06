@@ -390,8 +390,15 @@ def promoteTask(taskid):
 	printUser()
 	cur = mysql.connection.cursor()
 	cur.execute('SELECT progress FROM tasks WHERE id = %s', [taskid])
-	quality = cur.fetchone()
-	cur.execute('UPDATE tasks SET status = %s, progress = %s, quality = %s WHERE id = %s', ["1", "0", str(quality['progress']), taskid])
+
+	quality = cur.fetchone()['progress']
+
+	stabsum = getStabSum(session['uid'])
+
+	if stabsum > 70:
+		quality = quality*math.sqrt(getStabSum(session['uid'])/1000)
+
+	cur.execute('UPDATE tasks SET status = %s, progress = %s, quality = %s WHERE id = %s', ["1", "0", str(quality), taskid])
 	cur.connection.commit()
 	cur.close()
 	return redirect(url_for('office', uid=session['uid']))
@@ -617,26 +624,29 @@ def updateTasks(spec = 0):
 					hype = hype * (random.uniform(98.0,101.4)/100)
 					reach = potential * hype * math.sqrt(fans*niveau+1)/((retail+1)/5)
 
-					toSell = random.randint(5,(int(reach/4+6)))
+					toSell = random.randint(5,(int(reach/6+6)))
 
 					daily = retail*toSell*46
 
 					copies = copies - toSell
-
-					value = value + daily/46
 
 					if copies <= 0:
 						copies = 0
 						daily = 0
 						fans = fans * 0.9
 
+					value = value + daily/46
+
 					if fans <= 10:
 						fans = 10
 
 					if quality > random.randint(35,65) and potential > random.randint(35,65):
-						fans = fans * (random.randint(95,125)/100)
+						if fans > 5000:
+							fans = fans * (random.randint(90,105)/100)
+						else:
+							fans = fans * (random.randint(95,125)/100)
 					else:
-						fans = fans * 0.85
+						fans = fans * 0.80
 
 
 					cur.execute('UPDATE tasks SET hype = %s, copies = %s, reach = %s, daily = %s, value=%s WHERE id = %s', [str(hype), str(copies), str(reach), str(daily), str(value),task['id']])
