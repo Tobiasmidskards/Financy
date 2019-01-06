@@ -20,7 +20,10 @@
 <hr>
 <div class="row" >
 	<div class="col-sm-2 col-md-3">
-		<img src="https://www.dolphinwear.com/img/default-product.jpg" width="100%">
+		<img src="{{logo}}" width="100%">
+		{% if company.uid == session.uid %}
+		<a href="/upload"><button type="button" class="btn btn-sm btn-dark" name="button">Nyt logo</button></a>
+		{% endif %}
 	</div>
 	<div class="col-sm-1 col-md-3">
 		<small>Firma</small>

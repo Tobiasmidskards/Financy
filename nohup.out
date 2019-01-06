@@ -1,0 +1,84 @@
+ * Serving Flask app "app" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+ * Running on http://192.168.0.60:5000/ (Press CTRL+C to quit)
+192.168.0.17 - - [06/Jan/2019 17:54:39] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:39] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:39] "GET /employees HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:40] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:41] "GET /market HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:41] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:46] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:50] "GET /market HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 17:54:50] "GET /employees HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 17:55:09] "GET / HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 17:55:11] "GET /office/13 HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 17:55:24] "GET /office/13 HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:14:29] "GET / HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:25:20] "GET /api/printer HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 18:55:41] "GET /api/printer HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 18:57:59] "GET / HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:58:00] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 18:58:01] "GET /login HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:58:01] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 18:58:09] "POST /login HTTP/1.1" 302 -
+83.89.50.31 - - [06/Jan/2019 18:58:10] "GET /office/13 HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:58:10] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 18:58:20] "GET /market HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:58:20] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 18:58:27] "GET /office/17 HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 18:58:27] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:09:44] "GET / HTTP/1.0" 200 -
+83.89.50.31 - - [06/Jan/2019 19:12:22] "GET /ccvv HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:14:33] "GET / HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 19:26:19] "GET /api/printer HTTP/1.1" 404 -
+192.168.0.17 - - [06/Jan/2019 19:37:23] "GET / HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:37:24] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /office/15 HTTP/1.1" 302 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /login HTTP/1.1" 200 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon-120x120-precomposed.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon-120x120.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /favicon.ico HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon-120x120-precomposed.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon-120x120.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:34] "GET /apple-touch-icon-precomposed.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:35] "GET /apple-touch-icon.png HTTP/1.1" 404 -
+83.89.50.31 - - [06/Jan/2019 19:37:35] "GET /favicon.ico HTTP/1.1" 404 -
+192.168.0.17 - - [06/Jan/2019 19:37:38] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:37:44] "GET /copies/128 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:37:48] "POST /copies/128 HTTP/1.1" 302 -
+192.168.0.17 - - [06/Jan/2019 19:37:48] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:37:57] "GET /market HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:38:04] "GET /office/17 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:38:08] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:38:09] "GET /employees HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:38:37] "GET /employee/29 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:40:28] "GET /employees HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:40:32] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:40:34] "GET /market HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:40:39] "GET /office/15 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 19:40:40] "GET /employee/126 HTTP/1.1" 200 -
+ * Serving Flask app "app" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+ * Running on http://192.168.0.60:5000/ (Press CTRL+C to quit)
+192.168.0.17 - - [06/Jan/2019 21:35:19] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:20] "GET /employees HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:20] "GET /market HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:21] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:26] "GET /promoteTask/131 HTTP/1.1" 302 -
+192.168.0.17 - - [06/Jan/2019 21:35:26] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:31] "GET /educate HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:32] "POST /educate HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:35:36] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:44:03] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:44:03] "GET /employees HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:44:04] "GET /office/13 HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:44:06] "GET /upload HTTP/1.1" 200 -
+192.168.0.17 - - [06/Jan/2019 21:44:07] "GET /office/13 HTTP/1.1" 200 -

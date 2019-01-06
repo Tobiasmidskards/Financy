@@ -7,14 +7,23 @@ import random
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import math
+from werkzeug.utils import secure_filename
+import os
+from flask import send_from_directory
+
+
+UPLOAD_FOLDER = '/uploads'
+ALLOWED_EXTENSIONS = set(['png'])
+
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # config MySQL
 
 app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'pi'
-app.config['MYSQL_PASSWORD'] = 'x'
+app.config['MYSQL_USER'] = 'tobias'
+app.config['MYSQL_PASSWORD'] = 'xxx'
 app.config['MYSQL_DB'] = 'financy'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
@@ -22,6 +31,37 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 scheduler = BackgroundScheduler()
+
+def allowed_file(filename):
+	return '.' in filename and \
+		   filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+	if request.method == 'POST':
+		# check if the post request has the file part
+		if 'file' not in request.files:
+			flash('No file part')
+			return redirect(request.url)
+		file = request.files['file']
+		# if user does not select file, browser also
+		# submit an empty part without filename
+		if file.filename == '':
+			flash('No selected file')
+			return redirect(request.url)
+		if file and allowed_file(file.filename):
+			filename = secure_filename(file.filename)
+			filename = str(session['uid']) + '.png'
+			file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+			flash('Du har nu uploaded et nyt logo.', 'success')
+			return redirect(url_for('office', uid = session['uid']))
+
+	return render_template('upload.html')
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+	return send_from_directory(app.config['UPLOAD_FOLDER'],
+							   filename)
 
 class copiesForm(Form):
 	amount = IntegerField('Antal')
@@ -224,13 +264,21 @@ def createEmployees():
 		random1 = random.randint(0,len(first)-1)
 		random2 = random.randint(0,len(last)-1)
 
+		frontend = str(random.randint(3,9))
+		marketing = str(random.randint(3,9))
+		backend = str(random.randint(3,9))
+		audio = str(random.randint(3,9))
+		graphic = str(random.randint(3,9))
+		system = str(random.randint(3,9))
+		year = str(random.randint(15,31))
+
 		firstname = first[random1]
 		lastname = last[random2]
 		discoveredby = "13"
 
 		print(firstname, " ", lastname)
 
-		cur.execute('INSERT INTO employee(firstname, lastname, potential, discoveredby) VALUES(%s, %s, %s, %s)', [firstname, lastname, potential, session['uid']])
+		cur.execute('INSERT INTO employee(firstname, lastname, potential, discoveredby, frontend, marketing, backend, audio, graphic, system, year) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', [firstname, lastname, potential, session['uid'], frontend, backend, marketing, audio, graphic, system, year])
 		cur.connection.commit()
 
 	cur.close()
@@ -263,6 +311,7 @@ def employees():
 	if result > 0:
 		employees = cur.fetchall()
 		for employee in employees:
+			employee['salary'] = int(employee['salary'])
 			employee['sum'] = getStatsSum(employee)
 		cur.close()
 		return render_template('employees.html', employees=employees)
@@ -328,8 +377,11 @@ def office(uid):
 			if fansmsg:
 				flash('Du sælger produkter med dårlig kvalitet eller potentiale. Det bryder dine fans sig ikke om. Nedlæg fiskoerne.', 'danger')
 
+		logo = os.path.join(app.config['UPLOAD_FOLDER'], str(company['uid']) + '.png')
+		if not (os.path.isfile(logo[1:])):
+			logo = 'http://argot.fr/wp-content/plugins/uix-shortcodes/admin/uixscform/images/no-logo.png'
 
-		return render_template('office.html', company=company, tasks=tasks, stab=getStab(uid))
+		return render_template('office.html', company=company, tasks=tasks, stab=getStab(uid), logo=logo)
 	cur.close()
 	return redirect(url_for('index'))
 
@@ -449,6 +501,55 @@ def createTask():
 
 	return render_template('createTask.html', form=form)
 
+
+def educateAll():
+	cur = mysql.connection.cursor()
+	result = cur.execute("SELECT * FROM employee")
+	if result > 0:
+		employees = cur.fetchall()
+		for employee in employees:
+			employee['concentration'] = random.randint(int(employee['potential']/4), int(employee['potential']/2)*5)
+
+			employee['frontendexp'] += employee['concentration'] * (random.randint(0,3)/3)
+			employee['backendexp'] += employee['concentration'] * (random.randint(0,3)/3)
+			employee['marketingexp'] += employee['concentration'] * (random.randint(0,3)/3)
+			employee['audioexp'] += employee['concentration'] * (random.randint(0,3)/3)
+			employee['systemexp'] += employee['concentration'] * (random.randint(0,3)/3)
+			employee['graphicexp'] += employee['concentration'] * (random.randint(0,3)/3)
+
+			employee['total'] = 0
+			if int(employee['companyid']) != -1:
+				print(employee['companyid'])
+				if employee['frontendexp'] > 100:
+					employee['frontendexp'] = 0.0
+					employee['frontend'] += 1
+					employee['total'] += 1
+				if employee['backendexp'] > 100:
+					employee['backendexp'] = 0.0
+					employee['backend'] += 1
+					employee['total'] += 1
+				if employee['marketingexp'] > 100:
+					employee['marketingexp'] = 0.0
+					employee['marketing'] += 1
+					employee['total'] += 1
+				if employee['audioexp'] > 100:
+					employee['audioexp'] = 0.0
+					employee['audio'] += 1
+					employee['total'] += 1
+				if employee['systemexp'] > 100:
+					employee['systemexp'] = 0.0
+					employee['system'] += 1
+					employee['total'] +=1
+				if employee['graphicexp'] > 100:
+					employee['graphicexp'] = 0.0
+					employee['graphic'] += 1
+					employee['total'] +=1
+
+
+			cur.execute("UPDATE employee SET frontend = %s, backend = %s, marketing = %s, audio = %s, system = %s, graphic = %s, frontendexp = %s, backendexp = %s, marketingexp = %s, audioexp = %s, systemexp = %s, graphicexp = %s WHERE id = %s",
+				[employee['frontend'], employee['backend'], employee['marketing'], employee['audio'], employee['system'], employee['graphic'],
+				 employee['frontendexp'], employee['backendexp'], employee['marketingexp'], employee['audioexp'], employee['systemexp'], employee['graphicexp'], employee['id']])
+			cur.connection.commit()
 
 @app.route('/educate', methods=['GET', 'POST'])
 def educate():
@@ -715,13 +816,30 @@ def resetCourse():
 			cur.connection.commit()
 			cur.close()
 
+def updateSalary():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		result = cur.execute("SELECT * FROM employee")
+		if result > 0:
+			employees = cur.fetchall()
+			for employee in employees:
+				year = int(employee['year'])
+				potential = int(employee['potential'])
+				sum = int(getStatsSum(employee))
+				salary = sum/year*potential*7
+				cur.execute("UPDATE employee SET salary = %s WHERE id = %s", [str(salary), employee['id']])
+				cur.connection.commit()
+		cur.close()
+
 @app.route('/test')
 def test():
-	updateTasks()
+	#updateTasks()
 	# newDay()
 	# paySalary()
-	#updateValuation()
-	#createEmployees()
+	# updateValuation()
+	# createEmployees()
+	# educateAll()
+	# updateSalary()
 	return redirect(url_for('office', uid = session['uid']))
 
 def updateValuation():
@@ -767,16 +885,21 @@ def printUser():
 		print(name)
 		cur.close()
 
-scheduler.add_job(updateValuation, 'cron', hour=0)
-scheduler.add_job(paySalary, 'cron', hour=0)
-scheduler.add_job(resetCourse, 'cron', hour=0)
-scheduler.add_job(newDay, 'cron', hour=0)
+def serverUpdate():
+	with app.app_context():
+		updateSalary()
+		updateValuation()
+		paySalary()
+		resetCourse()
+		newDay()
+
+scheduler.add_job(serverUpdate, 'cron', hour=0)
 scheduler.add_job(updateTasks, 'cron', hour='0-23', minute='0,30')
 scheduler.start()
 
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
-	app.run(host='192.168.0.30', threaded=True)
+	app.run(host='192.168.0.60', threaded=True)
 
 atexit.register(lambda: scheduler.shutdown())
