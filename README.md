@@ -2,4 +2,4 @@
 
 Onlinebaseret managerspil.
 
-![alt text]()
+![alt text](https://github.com/Tobiasmidskards/Financy/blob/master/screendump.png)
