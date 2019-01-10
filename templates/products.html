@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+<div class="container">
+	<div class="row">
+		<div class="col-sm-12">
+			<h1>Produkter</h1>
+			<table id="dtBasicExample" class="table table-sm table-striped table-dark">
+				<thead>
+					<tr>
+						<th>Navn</th>
+						<th>Dato</th>
+						<th>Ejer</th>
+						<th>Soglte enheder</th>
+						<th>Pris pr. enhed</th>
+						<th>Værdi</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for task in tasks %}
+					<tr>
+            <td><a href="/task/{{task.id}}">{{task.title}}</a></td>
+						<td>{{task.createdate}}</td>
+						<td><a href="/office/{{task.uid}}">{{task.companyname}}</a></td>
+						<td>{{task.copiessold}}</td>
+						<td>{{task.retail}}</td>
+						<td>{{task.value}}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+</div>
+
+
+{% endblock %}

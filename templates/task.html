@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+			<h1>{{task.title}}</h1>
+			<hr>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12">
+			<small>Værdi</small>
+			<p>{{task.value}} kr. </p>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12">
+			<small>Solgte enheder</small>
+			<p>{{task.copiessold}}</p>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12">
+			<small>Pris pr. enhed</small>
+			<p>{{task.retail}} kr. </p>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-12">
+			<small>Ejer</small>
+			<p><a href="/office/{{task.uid}}">{{task.companyname}}</a></p>
+		</div>
+	</div>
+</div>
+{% endblock %}

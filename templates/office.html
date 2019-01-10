@@ -6,12 +6,18 @@
 <div class="container">
 	{% if company.uid == session.uid %}
 <div class="row">
-	<div class="col-sm-10">
+	<div class="col-sm-6">
 		<small>Midler</small>
 		<p><b>{{company.money}}</b> ,-</p>
 	</div>
-	<div class="col-sm-2">
-		<a class="nav-link"  href="/createEmployee"><button class="btn btn-primary btn-sm" type="button" name="button">Headhunt</button></a>
+	<div class="col-sm-6">
+		<div class="float-right">
+
+
+		<a href="/createEmployee"><button class="btn btn-primary btn-sm" type="button" name="button">Headhunt</button></a>
+		<a href="/educate"><button class="btn btn-sm btn-primary" type="button" name="button">Hold Foredrag</button></a>
+		<a href="/createTask"><button type="button" name="button" class="btn btn-success btn-sm">Nyt projekt</button></a>
+		</div>
 	</div>
 
 </div>
@@ -84,13 +90,16 @@
 
 
 <hr>
+
 <div class="row">
 	<div class="col-sm-9">
+
 
 		<small>Udvikling</small>
 		<table class="table table-sm table-striped table-dark rounded" style="">
 		<tr>
 			<th>Navn</th>
+			<th>Kvalitet</th>
 			<th>Fremskridt</th>
 			{% if company.uid == session.uid %}
 			<th></th>
@@ -101,7 +110,8 @@
 			{% for task in tasks %}
 			{% if task['sold'] == 0 and task.status == 0%}
 			<tr>
-				<td>{{task['title']}}</td>
+				<td><a href="/task/{{task['id']}}">{{task['title']}}</a></a></td>
+				<td>{{task.quality}}</td>
 				<td>
 						<p style = "color: {% if task.progress < 80 %} red; {% else %} green; {% endif %}">{{task.progress}} %</p>
 				</td>
@@ -132,7 +142,7 @@
 			{% for task in tasks %}
 			{% if task['sold'] == 0 and task.status == 1%}
 			<tr>
-				<td>{{task['title']}}</td>
+				<td><a href="/task/{{task['id']}}">{{task['title']}}</a></td>
 				<td>{{task.quality}} %</td>
 				<td>{{task['reach']}}</td>
 				<td>
@@ -160,10 +170,6 @@
 				</tr>
 				{% endfor %}
 			</table>
-			{% if company.uid == session.uid %}
-			<br>
-			<a href="/educate"><button class="btn btn-sm btn-primary" type="button" name="button">Hold Foredrag</button></a>
-			{% endif %}
 			<br>
 		</div>
 
@@ -179,11 +185,11 @@
 		<tr>
 			<th>Navn</th>
 			<th>Potentiale</th>
+			<th>Kvalitet</th>
 			<th>Salgpris</th>
 			<th>Reach</th>
 			<th>På lager</th>
 			<th>Fortjeneste</th>
-			<th>ca. indtjening/dag</th>
 			{% if company.uid == session.uid %}
 			<th></th>
 			<th></th>
@@ -194,8 +200,9 @@
 			{% for task in tasks %}
 			{% if task['sold'] == 0 and task.status == 2%}
 			<tr>
-				<td>{{task['title']}}</td>
+				<td><a href="/task/{{task['id']}}">{{task['title']}}</a></td>
 				<td>{{task.potential}}</td>
+				<td>{{task.quality}}</td>
 				<td>{{task.retail}} ,-</td>
 				<td>{{task['reach']}}</td>
 				<td>
@@ -204,7 +211,6 @@
 				<td>
 					<p style = "color: {% if task.value <= 0 %} red; {% else %} green; {% endif %}">{{task['value']}} ,-</p>
 				</td>
-				<td>{{task.daily}}</td>
 
 				{% if company.uid == session.uid %}
 						<td><a href="/copies/{{task['id']}}"><button class="btn btn-sm btn-primary" type="button">Producér</button></a></td>
@@ -217,14 +223,7 @@
 		</table>
 		<br>
 
-		{% if company.uid == session.uid %}
-		<a href="/createTask">
-		<button type="button" name="button" class="btn btn-primary btn-sm">Nyt projekt</button>
-		</a>
-		<a href="/contractWork">
-		<button type="button" name="button" class="btn btn-primary btn-sm">Forespørgelser</button>
-		</a>
-		{% endif %}
+
 
 	</div>
 </div>

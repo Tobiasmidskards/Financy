@@ -6,21 +6,27 @@
 
 <h1>Arbejdsløse</h1>
 
-<table class="table table-sm table-striped table-dark rounded" style="">
+<table id="dtBasicExample" class="table table-sm table-striped table-dark rounded">
+	<thead>
+
+
 	<tr>
 		<th>Navn</th>
 		<th>Alder</th>
-		<th>Lønkrav</th>
+		<th>Lønkrav (kr/dag)</th>
 		<th>Stats</th>
 	</tr>
+	</thead>
+	<tbody>
 	{% for employee in employees %}
 	<tr>
 		<td><a href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
 		<td>{{employee.year}}</td>
-		<td>{{employee.salary}} kr/dag</td>
+		<td>{{employee.salary}}</td>
 		<td>{{employee.sum}}</td>
 	</tr>
 	{% endfor %}
+	</tbody>
 </table>
 </div>
 {% endblock %}

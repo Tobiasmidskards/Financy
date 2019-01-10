@@ -12,7 +12,7 @@ import os
 from flask import send_from_directory
 
 
-UPLOAD_FOLDER = '/uploads'
+UPLOAD_FOLDER = '/home/pi/Financy/uploads'
 ALLOWED_EXTENSIONS = set(['png'])
 
 
@@ -233,7 +233,7 @@ def hire(employeeid):
 	cur.execute("SELECT office FROM company WHERE uid = %s", [session['uid']])
 	office = cur.fetchone()['office']
 
-	if amount <= (office * 2):
+	if amount <= (office * 3):
 		cur.execute('UPDATE employee SET companyid = %s WHERE id = %s',[session['uid'] , employeeid])
 		cur.connection.commit()
 		flash('Du har nu ansat medarbejeren.', 'success')
@@ -294,7 +294,15 @@ def createEmployee():
 
 		potential = str(random.randint(10,101))
 
-		cur.execute('INSERT INTO employee(firstname, lastname, potential, discoveredby) VALUES(%s, %s, %s, %s)', [firstname, lastname, potential, session['uid']])
+		frontend = str(random.randint(3,9))
+		marketing = str(random.randint(3,9))
+		backend = str(random.randint(3,9))
+		audio = str(random.randint(3,9))
+		graphic = str(random.randint(3,9))
+		system = str(random.randint(3,9))
+
+		cur.execute('INSERT INTO employee(firstname, lastname, potential, discoveredby, frontend, marketing, backend, audio, graphic, system) VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', [firstname, lastname, potential, session['uid'], frontend, backend, marketing, audio, graphic, system])
+
 		cur.connection.commit()
 		cur.execute('SELECT LAST_INSERT_ID() as id')
 		id = cur.fetchone()
@@ -355,21 +363,24 @@ def office(uid):
 		company['ceo'] = cur.fetchone()['name']
 		cur.close()
 
-		copiesmsg, fansmsg, hypemsg = False, False, False
-
+		copiesmsg, fansmsg = False, False
 		tasks = getTasks(uid)
 
 		for task in tasks:
+			hypemsg = False
 			if task['status'] == 2:
 				if task['copies'] == 0:
 					copiesmsg = True
 				if (task['quality'] < 50 or task['potential'] < 50) and company['fans'] < 200:
 					fansmsg = True
-				if task['hype'] < 0.3:
+				if task['hype'] < 0.2:
 					hypemsg = True
 				if hypemsg and session['uid'] == int(uid):
-					msg = "Kunderne har mistet interessen for {}. Nedlæg produktet.".format(task['title'])
+					msg = "Kunderne er ved at miste interessen for {}. Overvej at nedlæg produktet.".format(task['title'])
 					flash(msg, 'danger')
+			if task['status'] == 0 and task['quality'] < 70 and session['uid'] == int(uid) and task['progress'] > 90:
+				msg = "Dit produkt {} har en lav kvalitet. Jo bedre ansatte du har, jo mere øges kvaliteten.".format(task['title'])
+				flash(msg, 'danger')
 
 		if session['uid'] == int(uid):
 			if copiesmsg:
@@ -377,7 +388,7 @@ def office(uid):
 			if fansmsg:
 				flash('Du sælger produkter med dårlig kvalitet eller potentiale. Det bryder dine fans sig ikke om. Nedlæg fiskoerne.', 'danger')
 
-		logo = os.path.join(app.config['UPLOAD_FOLDER'], str(company['uid']) + '.png')
+		logo = os.path.join('/uploads', str(company['uid']) + '.png')
 		if not (os.path.isfile(logo[1:])):
 			logo = 'http://argot.fr/wp-content/plugins/uix-shortcodes/admin/uixscform/images/no-logo.png'
 
@@ -445,12 +456,7 @@ def promoteTask(taskid):
 
 	quality = cur.fetchone()['progress']
 
-	stabsum = getStabSum(session['uid'])
-
-	if stabsum > 70:
-		quality = quality*math.sqrt(getStabSum(session['uid'])/1000)
-
-	cur.execute('UPDATE tasks SET status = %s, progress = %s, quality = %s WHERE id = %s', ["1", "0", str(quality), taskid])
+	cur.execute('UPDATE tasks SET status = %s, progress = %s WHERE id = %s', ["1", "0", taskid])
 	cur.connection.commit()
 	cur.close()
 	return redirect(url_for('office', uid=session['uid']))
@@ -553,7 +559,6 @@ def educateAll():
 
 @app.route('/educate', methods=['GET', 'POST'])
 def educate():
-	printUser()
 	if request.method == 'POST':
 		cur = mysql.connection.cursor()
 		cur.execute("SELECT coursed FROM company WHERE uid = %s", [session['uid']])
@@ -601,6 +606,7 @@ def educate():
 						employee['graphic'] += 1
 						employee['total'] +=1
 
+					cur.execute("INSERT INTO concentrations(employeeid, xp) VALUES(%s, %s)", [employee['id'], employee['concentration']])
 					cur.execute("UPDATE company SET coursed = %s WHERE uid = %s", ["1", session['uid']])
 					cur.execute("UPDATE employee SET frontend = %s, backend = %s, marketing = %s, audio = %s, system = %s, graphic = %s, frontendexp = %s, backendexp = %s, marketingexp = %s, audioexp = %s, systemexp = %s, graphicexp = %s WHERE id = %s",
 						[employee['frontend'], employee['backend'], employee['marketing'], employee['audio'], employee['system'], employee['graphic'],
@@ -630,6 +636,43 @@ def cancelTask(taskid):
 	cur.close()
 	flash('Du har nu fjernet produktet fra salg.', 'success')
 	return redirect(url_for('office', uid=session['uid']))
+
+@app.route('/task/<taskid>')
+def task(taskid):
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM tasks WHERE id = %s',[taskid])
+	if result > 0:
+		task = cur.fetchone()
+		task['value'] = int(task['value'])
+		cur.execute('SELECT companyname FROM company WHERE uid = %s',[task['uid']])
+		companyname = cur.fetchone()
+		task['companyname'] = companyname['companyname']
+		cur.close()
+
+
+		return render_template('task.html', task=task)
+
+	cur.close()
+	return render_template('task.html')
+
+@app.route('/products')
+def products():
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM tasks')
+	if result > 0:
+		tasks = cur.fetchall()
+		for task in tasks:
+			task['value'] = int(task['value'])
+			task['createdate'] = task['createdate'].date()
+			cur.execute('SELECT companyname FROM company WHERE uid = %s',[task['uid']])
+			companyname = cur.fetchone()
+			task['companyname'] = companyname['companyname']
+
+		cur.close()
+		return render_template('products.html', tasks=tasks)
+	cur.close()
+	return render_template('products.html')
+
 
 @app.route('/copies/<taskid>', methods=['GET', 'POST'])
 def copies(taskid):
@@ -683,6 +726,7 @@ def updateTasks(spec = 0):
 				copies = task['copies']
 				hype = task['hype']
 				value = task['value']
+				copiessold = task['copiessold']
 
 				cur.execute("SELECT fans FROM company WHERE uid = %s", [userid])
 				fans = cur.fetchone()['fans']
@@ -702,7 +746,9 @@ def updateTasks(spec = 0):
 					if (progress > 99):
 						progress = 100
 
-					cur.execute('UPDATE tasks SET progress = %s WHERE id = %s',[str(progress) ,task['id']])
+					quality = progress*math.sqrt(getStabSum(userid)/300)*random.uniform(0.9,1.3)
+
+					cur.execute('UPDATE tasks SET progress = %s, quality = %s WHERE id = %s',[str(progress), str(quality),task['id']])
 					cur.connection.commit()
 
 				elif (progress < 101 and progress > 0 and status == 1):
@@ -729,7 +775,12 @@ def updateTasks(spec = 0):
 
 					daily = retail*toSell*46
 
+					if toSell >= copies:
+						toSell = copies
+
 					copies = copies - toSell
+
+					copiessold += toSell
 
 					if copies <= 0:
 						copies = 0
@@ -741,16 +792,16 @@ def updateTasks(spec = 0):
 					if fans <= 10:
 						fans = 10
 
-					if quality > random.randint(35,65) and potential > random.randint(35,65):
+					if quality > random.randint(25,65) and potential > random.randint(45,65):
 						if fans > 5000:
-							fans = fans * (random.randint(90,105)/100)
+							fans = fans * (random.randint(92,105)/100)
 						else:
 							fans = fans * (random.randint(95,125)/100)
 					else:
 						fans = fans * 0.80
 
 
-					cur.execute('UPDATE tasks SET hype = %s, copies = %s, reach = %s, daily = %s, value=%s WHERE id = %s', [str(hype), str(copies), str(reach), str(daily), str(value),task['id']])
+					cur.execute('UPDATE tasks SET hype = %s, copies = %s, reach = %s, daily = %s, value=%s, copiessold = %s WHERE id = %s', [str(hype), str(copies), str(reach), str(daily), str(value), str(copiessold), task['id']])
 					cur.connection.commit()
 					print("Bruger: ", userid , " +", int(daily/48), " Opg: ", title, " Hype: ", hype)
 					companyMoney(int(daily/48), True, task['uid'])
@@ -762,11 +813,21 @@ def updateTasks(spec = 0):
 					cur.connection.commit()
 		cur.close()
 
-@app.route('/upgradeOffice')
+@app.route('/upgradeOffice', methods=['POST','GET'])
 def upgradeOffice():
 	cur = mysql.connection.cursor()
 	cur.execute("SELECT office FROM company WHERE uid = %s", [session['uid']])
 	office = cur.fetchone()['office']
+
+	if request.method == 'POST':
+		if office == 1:
+			if companyMoney(1000000, False):
+				cur.execute("UPDATE company SET office=%s WHERE uid = %s", ["2", session['uid']])
+				cur.connection.commit()
+				flash('Du har nu opgraderet dit kontor', 'success')
+				cur.close()
+				return redirect(url_for('office', uid=session['uid']))
+
 	cur.close()
 	return render_template('upgradeOffice.html', office=office)
 
@@ -826,20 +887,20 @@ def updateSalary():
 				year = int(employee['year'])
 				potential = int(employee['potential'])
 				sum = int(getStatsSum(employee))
-				salary = sum/year*potential*7
+				salary = sum/year*potential*14
 				cur.execute("UPDATE employee SET salary = %s WHERE id = %s", [str(salary), employee['id']])
 				cur.connection.commit()
 		cur.close()
 
 @app.route('/test')
 def test():
-	#updateTasks()
+	updateTasks()
 	# newDay()
 	# paySalary()
-	# updateValuation()
+	#updateValuation()
 	# createEmployees()
 	# educateAll()
-	# updateSalary()
+	#updateSalary()
 	return redirect(url_for('office', uid = session['uid']))
 
 def updateValuation():
