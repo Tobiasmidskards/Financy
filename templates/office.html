@@ -11,13 +11,18 @@
 		<p><b>{{company.money}}</b> ,-</p>
 	</div>
 	<div class="col-sm-6">
+		{% if company.companytype > 1 %}
 		<div class="float-right">
-
-
-		<a href="/createEmployee"><button class="btn btn-primary btn-sm" type="button" name="button">Headhunt</button></a>
-		<a href="/educate"><button class="btn btn-sm btn-primary" type="button" name="button">Hold Foredrag</button></a>
-		<a href="/createTask"><button type="button" name="button" class="btn btn-success btn-sm">Nyt projekt</button></a>
+			<a href="/createEmployee"><button class="btn btn-primary btn-sm" type="button" name="button">Headhunt</button></a>
+			<a href="/educate"><button class="btn btn-sm btn-primary" type="button" name="button">Hold Foredrag</button></a>
+			<a href="/createWork"><button type="button" name="button" class="btn btn-success btn-sm">Ny forespørgsel</button></a>
+			<a href="/createTask"><button type="button" name="button" class="btn btn-success btn-sm">Nyt projekt</button></a>
 		</div>
+		{% else %}
+		<div class="float-right">
+			<a href="/createWork"><button type="button" name="button" class="btn btn-success btn-sm">Ny forespørgsel</button></a>
+		</div>
+		{% endif %}
 	</div>
 
 </div>
@@ -34,6 +39,16 @@
 	<div class="col-sm-1 col-md-3">
 		<small>Firma</small>
 		<p><b>{{company['companyname']}}</b></p>
+		<div class="row">
+			<div class="col">
+				<small>Firmatype ({{company.companytype}}/5)
+						<a href="/upgradeCompany">
+								<i style="color:white;" class="fas fa-angle-up"></i>
+					 	</a>
+				</small>
+				<p>{{{1:"Freelance", 2:"Enkeltmands virksomhed", 3:"Mindre virksomhed", 4:"Aps", 5:"Aktieselskab"}[company.companytype]}}</p>
+			</div>
+		</div>
 
 	</div>
 	<div class="col-sm-1 col-md-3">
@@ -54,7 +69,7 @@
 				 	</a>
 					{% endif %}
 				</small>
-				<p>{{{1:"Garage"}[company.office]}}</p>
+				<p>{{{1:"Garage",2:"Kælder", 3:"kontorfællesskab", 4:"Erhvervslejlihed", 5:"Ehvervsejendom", 6:"Stor erhversejendom"}[company.office]}}</p>
 
 			</div>
 
@@ -78,7 +93,7 @@
 					</a>
 					{% endif %}
 				</small>
-				<p>{{{1:"Selvstudie"}[company.education]}}</p>
+				<p>{{{1:"Selvstudie", 2:"YouTube", 3:"Lektiehjælp", 4:"Interne kurser", 5:"Akademisk niveau"}[company.education]}}</p>
 			</div>
 
 		</div>
@@ -91,11 +106,13 @@
 
 <hr>
 
+{% if company.companytype > 1 %}
+
 <div class="row">
-	<div class="col-sm-9">
+	<div class="{% if company.companytype > 2 %} col-sm-8 {% else %} col-md-12 {% endif %}">
 
 
-		<small>Udvikling</small>
+		<small>Udvikling ( {{teamsizes.dev}} på teamet )</small>
 		<table class="table table-sm table-striped table-dark rounded" style="">
 		<tr>
 			<th>Navn</th>
@@ -126,7 +143,7 @@
 		</table>
 		<br>
 
-		<small>Marketing</small>
+		<small>Marketing ( {{teamsizes.mark}} på teamet )</small>
 		<table class="table table-sm table-striped table-dark rounded" style="">
 		<tr>
 			<th>Navn</th>
@@ -160,74 +177,146 @@
 		</table>
 		<br>
 		</div>
-		<div class="col-sm-3">
-			<small>Ansatte</small>
+		{% if company.companytype > 2 %}
+		<div class="col-sm-4">
+			<small>Ansatte ({{teamsizes.total}})</small>
 			<table class="table table-sm table-striped table-dark rounded" style="width:100%;">
 				{% for employee in stab %}
 				<tr>
+					<td><small> {% if employee.Jobtitle == 'notitle' %}<b style="color:red">!</b>{% else %}<b>{{{"dev":"U", "mark":"M", "sale":"S", "kurs":"K"}[employee.Jobtitle]}}</b>{% endif %}</small></td>
 					<td><a style="" href="/employee/{{employee.id}}">{{employee.firstname}} {{employee.lastname}}</a></td>
 					<td>{{employee.sum}}</td>
 				</tr>
 				{% endfor %}
 			</table>
-			<br>
 		</div>
+		{% endif %}
 
 		</div>
 		<br>
 		<div class="row">
 			<div class="col-sm-12 col-md-12">
+				<small>Salg ( {{teamsizes.sale}} på teamet )</small>
+				<table class="table table-sm table-striped table-dark rounded">
+					<tr>
+						<th>Navn</th>
+						<th>Potentiale</th>
+						<th>Kvalitet</th>
+						<th>Salgpris</th>
+						<th>Reach</th>
+						<th>På lager</th>
+						<th>Fortjeneste</th>
+						{% if company.uid == session.uid %}
+						<th></th>
+						<th></th>
+						{% endif %}
+
+					</tr>
+
+					{% for task in tasks %}
+					{% if task['sold'] == 0 and task.status == 2%}
+					<tr>
+						<td><a href="/task/{{task['id']}}">{{task['title']}}</a></td>
+						<td>{{task.potential}}</td>
+						<td>{{task.quality}}</td>
+						<td>{{task.retail}} ,-</td>
+						<td>{{task['reach']}}</td>
+						<td>
+							<p style = "color: {% if task.copies < 25 %} red; {% else %} green; {% endif %}">{{task.copies}}</p>
+						</td>
+						<td>
+							<p style = "color: {% if task.value <= 0 %} red; {% else %} green; {% endif %}">{{ "{:,}".format(task['value']) }} ,-</p>
+					</td>
+
+					{% if company.uid == session.uid %}
+						<td><a href="/copies/{{task['id']}}"><button class="btn btn-sm btn-primary" type="button">Producér</button></a></td>
+						<td><a href="/cancelTask/{{task['id']}}"><button class="btn btn-sm btn-danger" type="button">Nedlæg</button></a></td>
+					{% endif %}
+
+				</tr>
+				{% endif %}
+				{% endfor %}
+			</table>
+		<br>
 
 
 
-		<small>Salg</small>
-		<table class="table table-sm table-striped table-dark rounded">
+	</div>
+
+
+
+</div>
+
+<div class="row">
+ <div class="col-md-12">
+	 <small>Forespørgelser</small>
+	 <table class="table table-sm table-striped table-dark rounded" style="">
+	 <tr>
+		 <th>Navn</th>
+		 <th>Fremskridt</th>
+		 <th>Udbytte</th>
+		 {% if company.uid == session.uid %}
+		 <th></th>
+		 {% endif %}
+
+	 </tr>
+
+		 {% for task in tasks %}
+		 {% if task.status == 10%}
+		 <tr>
+			 <td>{{task.title}}</td>
+			 <td>
+					 <p style = "color: {% if task.progress < 80 %} red; {% else %} green; {% endif %}">{{task.progress}} %</p>
+			 </td>
+			 <td>{{"{:,}".format(task.value)}} kr</td>
+
+			 {% if company.uid == session.uid %}
+					 <td><a href="/sellWork/{{task.workid}}"><button class="btn btn-sm {% if task['progress'] > 90 %} btn-success {% else %} btn-secondary {% endif %}" type="button"> Sælg </button></a></td>
+			 {% endif %}
+
+		 </tr>
+		 {% endif %}
+		 {% endfor %}
+	 </table>
+ </div>
+</div>
+
+{% else %}
+ <div class="row">
+ 	<div class="col-md-12">
+		<small>Forespørgelser</small>
+		<table class="table table-sm table-striped table-dark rounded" style="">
 		<tr>
 			<th>Navn</th>
-			<th>Potentiale</th>
-			<th>Kvalitet</th>
-			<th>Salgpris</th>
-			<th>Reach</th>
-			<th>På lager</th>
-			<th>Fortjeneste</th>
+			<th>Fremskridt</th>
+			<th>Udbytte</th>
 			{% if company.uid == session.uid %}
-			<th></th>
 			<th></th>
 			{% endif %}
 
 		</tr>
 
 			{% for task in tasks %}
-			{% if task['sold'] == 0 and task.status == 2%}
+			{% if task.status == 10%}
 			<tr>
-				<td><a href="/task/{{task['id']}}">{{task['title']}}</a></td>
-				<td>{{task.potential}}</td>
-				<td>{{task.quality}}</td>
-				<td>{{task.retail}} ,-</td>
-				<td>{{task['reach']}}</td>
+				<td>{{task.title}}</td>
 				<td>
-					<p style = "color: {% if task.copies < 25 %} red; {% else %} green; {% endif %}">{{task.copies}}</p>
+						<p style = "color: {% if task.progress < 80 %} red; {% else %} green; {% endif %}">{{task.progress}} %</p>
 				</td>
-				<td>
-					<p style = "color: {% if task.value <= 0 %} red; {% else %} green; {% endif %}">{{task['value']}} ,-</p>
-				</td>
+				<td>{{"{:,}".format(task.value)}} kr</td>
 
 				{% if company.uid == session.uid %}
-						<td><a href="/copies/{{task['id']}}"><button class="btn btn-sm btn-primary" type="button">Producér</button></a></td>
-						<td><a href="/cancelTask/{{task['id']}}"><button class="btn btn-sm btn-danger" type="button">Nedlæg</button></a></td>
+						<td><a href="/sellWork/{{task.workid}}"><button class="btn btn-sm {% if task['progress'] > 90 %} btn-success {% else %} btn-secondary {% endif %}" type="button"> Sælg </button></a></td>
 				{% endif %}
 
 			</tr>
 			{% endif %}
 			{% endfor %}
 		</table>
-		<br>
+ 	</div>
+ </div>
+{% endif %}
 
-
-
-	</div>
-</div>
-</div>
 <br>
 <br>
 <br>

@@ -10,6 +10,8 @@ import math
 from werkzeug.utils import secure_filename
 import os
 from flask import send_from_directory
+import smtplib
+from forms import *
 
 
 UPLOAD_FOLDER = '/home/pi/Financy/uploads'
@@ -31,6 +33,7 @@ app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 mysql = MySQL(app)
 scheduler = BackgroundScheduler()
+
 
 def allowed_file(filename):
 	return '.' in filename and \
@@ -62,36 +65,6 @@ def upload_file():
 def uploaded_file(filename):
 	return send_from_directory(app.config['UPLOAD_FOLDER'],
 							   filename)
-
-class copiesForm(Form):
-	amount = IntegerField('Antal')
-
-class RegisterForm(Form):
-	name = StringField('Fulde navn', [validators.Length(min=1,max=50)])
-	username = StringField('Brugernavn', [validators.Length(min=4, max=25)])
-	email = StringField('Email', [validators.Length(min=6, max=50)])
-	password = PasswordField('Password', [
-		validators.DataRequired(),
-		validators.EqualTo('confirm', message = 'Adgangskoderne er ikke ens.')
-	])
-	confirm = PasswordField('Gentag Password')
-	companyname = StringField('Firmanavn', [validators.Length(min=3, max=50)])
-
-class createTaskForm(Form):
-	taskname = StringField('Produktnavn', [validators.Length(min=1, max=50)])
-	choices = [('audio','Lyd'),('system','System'),('3d','3D')]
-	type = SelectField('Type', choices=choices)
-	retail = IntegerField('Butikspris')
-	choices = [('1','Nem'),('2','Medium'),('3','Svær')]
-	niveau = SelectField('Niveau', choices=choices)
-
-class newEmployeeForm(Form):
-	firstname = StringField('Navn', [validators.Length(min=2, max=10)])
-	lastname = StringField('Efternavn', [validators.Length(min=2, max=10)])
-
-@app.route('/fun')
-def fun():
-	return render_template('fun.html')
 
 def is_logged_in(f):
 	@wraps(f)
@@ -156,7 +129,6 @@ def createNewCompany(userid, companyname):
 	cur.execute('INSERT INTO company(uid, companyname) VALUES(%s, %s)', [userid, companyname])
 	cur.connection.commit()
 	cur.close()
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -287,6 +259,10 @@ def createEmployees():
 def createEmployee():
 	form = newEmployeeForm(request.form)
 
+	if (getCompanyType() < 3):
+		flash('Du skal opgradere din virksomhedstype for at hente nyuddannede.', 'danger')
+		return redirect(url_for('office', uid=session['uid']))
+
 	if request.method == 'POST' and form.validate():
 		firstname = form.firstname.data
 		lastname = form.lastname.data
@@ -319,12 +295,40 @@ def employees():
 	if result > 0:
 		employees = cur.fetchall()
 		for employee in employees:
-			employee['salary'] = int(employee['salary'])
+			employee['salary'] = "{:,}".format(int(employee['salary']))
 			employee['sum'] = getStatsSum(employee)
 		cur.close()
 		return render_template('employees.html', employees=employees)
 	cur.close()
 	return render_template('employees.html')
+
+@app.route('/employee/<employeeid>/settings', methods=['GET', 'POST'])
+def employeeSettings(employeeid):
+
+	if (getCompanyType() < 3):
+		flash('Du skal opgradere din virksomhedstype for at låse denne mulighed op.', 'danger')
+		return redirect(url_for('employee', employeeid=employeeid))
+
+	form = jobTitleForm(request.form)
+
+	cur = mysql.connection.cursor()
+	cur.execute("SELECT * FROM employee WHERE id=%s", [employeeid])
+	employee = cur.fetchone()
+
+	form.jobtitle.data = employee['Jobtitle']
+
+	if request.method == 'POST' and form.validate():
+		jobtitle = request.form['jobtitle']
+
+		cur.execute("UPDATE employee SET Jobtitle = %s WHERE id = %s", [jobtitle, employeeid])
+		cur.connection.commit()
+		cur.close()
+		msg = "{} har nu skiftet titel.".format(employee['firstname'])
+		flash(msg, 'success')
+		return redirect(url_for('employee', employeeid=employeeid))
+
+	cur.close()
+	return render_template('employeesettings.html', form=form, employee=employee)
 
 @app.route('/employee/<employeeid>')
 def employee(employeeid):
@@ -347,39 +351,87 @@ def employee(employeeid):
 
 		companyname['discoveredby'] = discoveredby['companyname']
 
+		result = cur.execute("SELECT * FROM (SELECT xp, date FROM concentrations WHERE employeeid=%s ORDER BY date DESC LIMIT 365) sub ORDER BY date ASC", [employee['id']])
+
+		concentrations = {}
+
+		if result > 0:
+			concentrations = cur.fetchall()
+			for concentration in concentrations:
+				concentration['date'] = concentration['date'].date()
+
 		cur.close()
-		return render_template('employee.html', employee=employee, companyname=companyname)
+		return render_template('employee.html', employee=employee, companyname=companyname, concentrations=concentrations, companytype=getCompanyType())
 	cur.close()
+
+@app.route('/globalmsgOK')
+def globalmsgOK():
+	cur = mysql.connection.cursor()
+	cur.execute("UPDATE company SET globalmsg = %s WHERE uid = %s", [0, session['uid']])
+	cur.connection.commit()
+	cur.close()
+	return redirect(url_for('office', uid=session['uid']))
+
+def getTeamsizes(companyid):
+	teamsizes = {}
+	cur = mysql.connection.cursor()
+	cur.execute("SELECT COUNT(*) as total FROM employee WHERE companyid = %s", [companyid])
+	teamsizes.update(cur.fetchone())
+	cur.execute("SELECT COUNT(*) as dev FROM employee WHERE companyid = %s and Jobtitle = %s", [companyid, "dev"])
+	teamsizes.update(cur.fetchone())
+	cur.execute("SELECT COUNT(*) as mark FROM employee WHERE companyid = %s and Jobtitle = %s", [companyid, "mark"])
+	teamsizes.update(cur.fetchone())
+	cur.execute("SELECT COUNT(*) as sale FROM employee WHERE companyid = %s and Jobtitle = %s", [companyid, "sale"])
+	teamsizes.update(cur.fetchone())
+	cur.close()
+	return teamsizes
 
 @app.route('/office/<uid>')
 @is_logged_in
 def office(uid):
-	cur = mysql.connection.cursor()
 	printUser()
+	cur = mysql.connection.cursor()
 	result = cur.execute('SELECT * FROM company WHERE uid=%s', [uid])
 	if result > 0:
 		company = cur.fetchone()
+
+		company['money'] = "{:,}".format(company['money'])
+
+		# Global message
+		if company['globalmsg'] == 1 and session['uid'] == int(uid):
+			return render_template('globalmsg.html')
+
 		cur.execute("SELECT name FROM user WHERE id = %s", [company['uid']])
 		company['ceo'] = cur.fetchone()['name']
-		cur.close()
+
+		teamsizes = getTeamsizes(company['uid'])
 
 		copiesmsg, fansmsg = False, False
 		tasks = getTasks(uid)
 
 		for task in tasks:
+			task['value'] = int(task['value'])
+			task['potential'] = int(task['potential'])
+
 			hypemsg = False
 			if task['status'] == 2:
 				if task['copies'] == 0:
 					copiesmsg = True
 				if (task['quality'] < 50 or task['potential'] < 50) and company['fans'] < 200:
 					fansmsg = True
-				if task['hype'] < 0.2:
+				if task['hype'] < 0.1:
 					hypemsg = True
+
 				if hypemsg and session['uid'] == int(uid):
 					msg = "Kunderne er ved at miste interessen for {}. Overvej at nedlæg produktet.".format(task['title'])
 					flash(msg, 'danger')
+
 			if task['status'] == 0 and task['quality'] < 70 and session['uid'] == int(uid) and task['progress'] > 90:
 				msg = "Dit produkt {} har en lav kvalitet. Jo bedre ansatte du har, jo mere øges kvaliteten.".format(task['title'])
+				flash(msg, 'danger')
+
+			if task['status'] == 10 and task['progress'] > 105 and session['uid'] == int(uid):
+				msg = "{} er nu klar til at blive færdiggjordt. Sælg produktet inden det falder i værdi.".format(task['title'])
 				flash(msg, 'danger')
 
 		if session['uid'] == int(uid):
@@ -392,7 +444,7 @@ def office(uid):
 		if not (os.path.isfile(logo[1:])):
 			logo = 'http://argot.fr/wp-content/plugins/uix-shortcodes/admin/uixscform/images/no-logo.png'
 
-		return render_template('office.html', company=company, tasks=tasks, stab=getStab(uid), logo=logo)
+		return render_template('office.html', company=company, tasks=tasks, stab=getStab(uid), logo=logo, teamsizes=teamsizes)
 	cur.close()
 	return redirect(url_for('index'))
 
@@ -413,15 +465,17 @@ def getStab(companyid):
 	cur.close()
 	return {}
 
-def getStabSum(companyid):
+def getStabSum(companyid, department):
 	cur = mysql.connection.cursor()
 	result = cur.execute('SELECT * FROM employee WHERE companyid = %s',[companyid])
-	sum = 0
+	sum = 20
 	if result > 0:
 		employees = cur.fetchall()
 		for employee in employees:
-			sum += int(getStatsSum(employee))
+			if employee['Jobtitle'] == department:
+				sum += int(getStatsSum(employee))
 	cur.close()
+	print("cid:{} - dep:{} - sum:{}".format(companyid, department, sum))
 	return sum
 
 
@@ -438,7 +492,7 @@ def companyMoney(amount, method, uid = "default"):
 	else:
 		updatedMoney = money['money'] - amount
 
-	if updatedMoney < 0:
+	if updatedMoney < 0 and not method:
 		flash('Du har ikke råd!', 'danger')
 		cur.close()
 		return False
@@ -458,6 +512,31 @@ def promoteTask(taskid):
 
 	cur.execute('UPDATE tasks SET status = %s, progress = %s WHERE id = %s', ["1", "0", taskid])
 	cur.connection.commit()
+	cur.close()
+	return redirect(url_for('office', uid=session['uid']))
+
+@app.route('/sellWork/<workid>')
+def sellWork(workid):
+	cur = mysql.connection.cursor()
+	cur.execute('SELECT * FROM tasks WHERE workid=%s', [workid])
+	task = cur.fetchone()
+
+	if task['potential'] > 85 and task['progress'] > 80 and task['progress'] < 130:
+		cur.execute("SELECT fans FROM company WHERE uid = %s", [session['uid']])
+		fans = cur.fetchone()['fans']
+		fans = (task['potential']*50)+fans
+		cur.execute("UPDATE company SET fans = %s WHERE uid = %s", [str(fans), session['uid']])
+		cur.connection.commit()
+
+	cur.execute('UPDATE tasks SET status = %s WHERE workid = %s', ["11", workid])
+	cur.connection.commit()
+
+	companyMoney(int(task['value']),True)
+
+	msg = "Du har nu færdiggjordt {} og dermed har du tjent {} kr.".format(task['title'], str(task['value']))
+
+	flash(msg, 'success')
+
 	cur.close()
 	return redirect(url_for('office', uid=session['uid']))
 
@@ -481,10 +560,50 @@ def sellTask(taskid):
 	flash('Du har nu sendt dit produkt til produktion.', 'success')
 	return redirect(url_for('office', uid=session['uid']))
 
+def getCompanyType():
+	cur = mysql.connection.cursor()
+	cur.execute("SELECT companytype FROM company WHERE uid=%s", [session['uid']])
+	companytype = cur.fetchone()['companytype']
+	cur.close()
+	return companytype
+
+@app.route('/acceptWork/<workid>')
+def acceptWork(workid):
+	cur = mysql.connection.cursor()
+	cur.execute("SELECT * FROM works WHERE id=%s", [workid])
+	work = cur.fetchone()
+
+	potential = str(random.randint(0,100))
+
+	cur.execute('INSERT INTO tasks(workid, title, niveau, payment, status, uid, potential) VALUES(%s, %s, %s, %s, %s, %s, %s)',
+				[work['id'], work['title'], work['niveau'], work['payment'] ,"10", session['uid'], potential])
+
+	cur.execute('DELETE FROM works WHERE id= %s', [work['id']])
+	cur.connection.commit()
+
+	cur.close()
+	return redirect(url_for('office', uid=session['uid']))
+
+@app.route('/createWork', methods=['GET', 'POST'])
+def createWork():
+	cur = mysql.connection.cursor()
+	result = cur.execute('SELECT * FROM works')
+	if result > 0:
+		works = cur.fetchall()
+		cur.close()
+		return render_template('createWork.html', works=works)
+	cur.close()
+	flash('Der er ingen nye forespørgelser', 'danger')
+	return redirect(url_for('office', uid=session['uid']))
+
 @app.route('/createTask', methods=['GET', 'POST'])
 def createTask():
 	printUser()
 	form = createTaskForm(request.form)
+
+	if (getCompanyType() < 2):
+		flash('Du skal opgradere din virksomhedstype for at lave dine egne projekter.', 'danger')
+		return redirect(url_for('office', uid=session['uid']))
 
 	if request.method == 'POST' and form.validate():
 		taskname = form.taskname.data
@@ -559,6 +678,10 @@ def educateAll():
 
 @app.route('/educate', methods=['GET', 'POST'])
 def educate():
+	if (getCompanyType() < 3):
+		flash('Du skal opgradere din virksomhedstype for holde foredrag.', 'danger')
+		return redirect(url_for('office', uid=session['uid']))
+
 	if request.method == 'POST':
 		cur = mysql.connection.cursor()
 		cur.execute("SELECT coursed FROM company WHERE uid = %s", [session['uid']])
@@ -571,7 +694,7 @@ def educate():
 			if result > 0:
 				employees = cur.fetchall()
 				for employee in employees:
-					employee['concentration'] = random.randint(int(employee['potential']/4), int(employee['potential']/2))*education['education']
+					employee['concentration'] = random.randint(int(employee['potential']/6), int(employee['potential']/4))*education['education']
 
 					employee['frontendexp'] += employee['concentration'] * (random.randint(0,3)/3)
 					employee['backendexp'] += employee['concentration'] * (random.randint(0,3)/3)
@@ -706,7 +829,7 @@ def copies(taskid):
 def updateTasks(spec = 0):
 	with app.app_context():
 		cur = mysql.connection.cursor()
-		if spec == 13:
+		if spec == 29:
 			result = cur.execute('SELECT * FROM tasks WHERE uid = %s', [spec])
 		else:
 			result = cur.execute('SELECT * FROM tasks')
@@ -727,37 +850,53 @@ def updateTasks(spec = 0):
 				hype = task['hype']
 				value = task['value']
 				copiessold = task['copiessold']
+				payment = task['payment']
 
 				cur.execute("SELECT fans FROM company WHERE uid = %s", [userid])
 				fans = cur.fetchone()['fans']
 
+				cur.execute("SELECT COUNT(*) as count FROM tasks WHERE uid = %s", [userid])
+				count = cur.fetchone()['count']
+
 				if progress==0:
 					progress = 2
 
-				if (progress < 101 and progress > 0 and status == 0):
+				if (progress < 150 and progress > 0 and status == 10):
+					delta = (((potential*math.sqrt(30*50)/niveau/24/5)+1)*random.uniform(0.8,1.2))/count
+					progress += delta
 
-					stabforce = getStabSum(userid)
+					if progress < 100:
+						value = payment * (progress/100)
+
+					if (progress > 105):
+						value = payment * 0.96
+
+					cur.execute('UPDATE tasks SET progress = %s, value = %s WHERE id = %s',[str(progress), str(value),task['id']])
+					cur.connection.commit()
+
+				elif (progress < 101 and progress > 0 and status == 0):
+
+					stabforce = getStabSum(userid, "dev")
 					if stabforce == 0:
 						stabforce = 10
 
-					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
+					delta = (potential*math.sqrt(stabforce*50)/niveau/24/24)+1
 					progress += delta
 
 					if (progress > 99):
 						progress = 100
 
-					quality = progress*math.sqrt(getStabSum(userid)/300)*random.uniform(0.9,1.3)
+					quality = progress*math.sqrt(stabforce/300)*random.uniform(0.9,1.3)
 
 					cur.execute('UPDATE tasks SET progress = %s, quality = %s WHERE id = %s',[str(progress), str(quality),task['id']])
 					cur.connection.commit()
 
 				elif (progress < 101 and progress > 0 and status == 1):
-					stabforce = getStabSum(userid)
+					stabforce = getStabSum(userid, "mark")
 					if stabforce == 0:
 						stabforce = 10
-					delta = (potential*math.sqrt(stabforce*50)/niveau/24/12)+1
+					delta = (potential*math.sqrt(stabforce*50)/niveau/24/24)+1
 					progress += delta
-
 					if (progress > 99):
 						progress = 100
 
@@ -766,10 +905,10 @@ def updateTasks(spec = 0):
 
 					cur.execute('UPDATE tasks SET progress = %s, reach = %s, hype = %s WHERE id = %s',[str(progress), str(reach), str(hype), task['id']])
 					cur.connection.commit()
-
 				elif (status == 2):
-					hype = hype * (random.uniform(98.0,101.4)/100)
-					reach = potential * hype * math.sqrt(fans*niveau+1)/((retail+1)/5)
+					stabforce = getStabSum(userid, "sale")
+					hype = hype * (random.uniform(97.0,101.4)/100)
+					reach = potential * hype * math.sqrt(fans*niveau+1)/((retail+1)/5)*(stabforce/100)
 
 					toSell = random.randint(5,(int(reach/6+6)))
 
@@ -793,17 +932,20 @@ def updateTasks(spec = 0):
 						fans = 10
 
 					if quality > random.randint(25,65) and potential > random.randint(45,65):
-						if fans > 5000:
-							fans = fans * (random.randint(92,105)/100)
+						if fans > 50000:
+							fans = fans * (random.uniform(99.9,101.9)/100)
+						elif fans > 5000:
+							fans = fans + ((fans/50) * (random.randint(98,104)/100))
 						else:
 							fans = fans * (random.randint(95,125)/100)
 					else:
-						fans = fans * 0.80
+						fans = fans - ((fans/10) * (random.randint(97,107)/100))
 
-
-					cur.execute('UPDATE tasks SET hype = %s, copies = %s, reach = %s, daily = %s, value=%s, copiessold = %s WHERE id = %s', [str(hype), str(copies), str(reach), str(daily), str(value), str(copiessold), task['id']])
+					cur.execute('UPDATE tasks SET hype = %s, copies = %s, reach = %s, daily = %s, value=%s, copiessold = %s WHERE id = %s',
+												[str(hype), str(copies), str(reach), str(daily), str(value), str(copiessold), task['id']])
 					cur.connection.commit()
-					print("Bruger: ", userid , " +", int(daily/48), " Opg: ", title, " Hype: ", hype)
+					#print("Bruger: ", userid , " +", int(daily/48), " Opg: ", title, " Hype: ", hype)
+
 					companyMoney(int(daily/48), True, task['uid'])
 
 					cur.execute('UPDATE company SET fans = %s WHERE uid = %s', [str(fans), userid])
@@ -819,10 +961,17 @@ def upgradeOffice():
 	cur.execute("SELECT office FROM company WHERE uid = %s", [session['uid']])
 	office = cur.fetchone()['office']
 
+
+
 	if request.method == 'POST':
-		if office == 1:
-			if companyMoney(1000000, False):
-				cur.execute("UPDATE company SET office=%s WHERE uid = %s", ["2", session['uid']])
+		if getCompanyType() < 3:
+			flash('Du skal have en større virksomhedstype for at opgradere', 'danger')
+
+		else:
+			price = [0, 1000000, 3000000, 10000000, 25000000, 50000000, 100000000, 100000000, 100000000, 100000000]
+
+			if companyMoney(price[office], False):
+				cur.execute("UPDATE company SET office=%s WHERE uid = %s", [str(office+1), session['uid']])
 				cur.connection.commit()
 				flash('Du har nu opgraderet dit kontor', 'success')
 				cur.close()
@@ -831,9 +980,51 @@ def upgradeOffice():
 	cur.close()
 	return render_template('upgradeOffice.html', office=office)
 
-@app.route('/upgradeEducation')
+@app.route('/upgradeEducation', methods=['GET', 'POST'])
 def upgradeEducation():
-	return render_template('upgradeEducation.html')
+	cur = mysql.connection.cursor()
+	cur.execute("SELECT education FROM company WHERE uid = %s", [session['uid']])
+	education = cur.fetchone()['education']
+
+
+
+	if request.method == 'POST':
+		if getCompanyType() < 3:
+			flash('Du skal have en større virksomhedstype for at opgradere', 'danger')
+		else:
+			price = [0, 1000000, 3000000, 10000000, 25000000, 50000000, 100000000, 100000000, 100000000, 100000000]
+
+			if companyMoney(price[education], False):
+				cur.execute("UPDATE company SET education=%s WHERE uid = %s", [str(education+1), session['uid']])
+				cur.connection.commit()
+				flash('Du har nu opgraderet dit uddannelsesfacilitet', 'success')
+				cur.close()
+				return redirect(url_for('office', uid=session['uid']))
+
+	cur.close()
+	return render_template('upgradeEducation.html', education=education)
+
+@app.route('/upgradeCompany', methods=['GET', 'POST'])
+def upgradeCompany():
+	cur = mysql.connection.cursor()
+	cur.execute("SELECT companytype FROM company WHERE uid = %s", [session['uid']])
+	companytype = cur.fetchone()['companytype']
+
+
+	if request.method == 'POST':
+		price = [0, 300000, 1000000, 3000000, 25000000, 50000000, 100000000, 100000000, 100000000, 100000000]
+
+		if companyMoney(price[companytype], False):
+			cur.execute("UPDATE company SET companytype=%s WHERE uid = %s", [str(companytype+1), session['uid']])
+			cur.connection.commit()
+			flash('Du har nu opgraderet din virksomhed', 'success')
+			cur.close()
+			return redirect(url_for('office', uid=session['uid']))
+		cur.close()
+		return redirect(url_for('office', uid=session['uid']))
+
+	cur.close()
+	return render_template('upgradeCompany.html', companytype=companytype)
 
 
 def paySalary():
@@ -887,20 +1078,26 @@ def updateSalary():
 				year = int(employee['year'])
 				potential = int(employee['potential'])
 				sum = int(getStatsSum(employee))
-				salary = sum/year*potential*14
+				salary = sum/year*potential*32*random.uniform(0.7,1.3)
 				cur.execute("UPDATE employee SET salary = %s WHERE id = %s", [str(salary), employee['id']])
 				cur.connection.commit()
 		cur.close()
 
-@app.route('/test')
-def test():
-	updateTasks()
+@app.route('/updatealltasks/<updates>')
+def updateAllTasks(updates = 1):
+	for i in range(0, int(updates)):
+		updateTasks(29)
 	# newDay()
 	# paySalary()
 	#updateValuation()
 	# createEmployees()
-	# educateAll()
+	#educateAll()
 	#updateSalary()
+	return redirect(url_for('office', uid = session['uid']))
+
+@app.route('/test')
+def test():
+	createNewWork()
 	return redirect(url_for('office', uid = session['uid']))
 
 def updateValuation():
@@ -936,6 +1133,9 @@ def getValuation(uid):
 def faq():
 	return render_template('faq.html')
 
+@app.route('/patchnotes')
+def patchnotes():
+	return render_template('patchnotes.html')
 
 def printUser():
 	with app.app_context():
@@ -943,8 +1143,26 @@ def printUser():
 		cur.execute("SELECT name FROM user WHERE id = %s", [session['uid']])
 		name = cur.fetchone()
 		name = name['name']
-		print(name)
+		print(name, request.environ.get('HTTP_X_REAL_IP', request.remote_addr))
 		cur.close()
+
+def createNewWork():
+	with app.app_context():
+		cur = mysql.connection.cursor()
+		cur.execute('SELECT COUNT(*) as amount FROM works')
+		amount = cur.fetchone()['amount']
+
+		svær = ['Gå tur med hund', 'Søgefunktion til Microsoft', 'Datascraping hos google', 'Mal plankeværk', 'Slå Græs', 'Ansigsgenkendelse', 'Wordpress side', 'Byg en drone', 'dendanskemetode.dk', 'Søgeoptimering', 'Fotografarbejde', 'Tag 50 snus på en dag challenge']
+
+		if amount < 15:
+			for i in range(0, 15-amount%15):
+				rand = random.randint(1,3)
+				cur.execute('INSERT INTO works(title, niveau, payment) VALUES (%s, %s, %s)', [svær[random.randint(0,len(svær)-1)], str(rand), str(rand*50000)])
+				cur.connection.commit()
+
+		cur.close()
+		print(amount)
+
 
 def serverUpdate():
 	with app.app_context():
@@ -956,11 +1174,12 @@ def serverUpdate():
 
 scheduler.add_job(serverUpdate, 'cron', hour=0)
 scheduler.add_job(updateTasks, 'cron', hour='0-23', minute='0,30')
+scheduler.add_job(createNewWork, 'cron', hour='0-23', minute='1,31')
 scheduler.start()
-
 
 if __name__ == '__main__':
 	app.secret_key='secret123'
 	app.run(host='192.168.0.60', threaded=True)
+	# app.run(debug='true', host='192.168.0.60', threaded=True)
 
 atexit.register(lambda: scheduler.shutdown())

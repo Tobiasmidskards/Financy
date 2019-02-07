@@ -23,7 +23,7 @@
 						<td>{{company.ceo}}</td>
 						<td>{{company.fans}}</td>
 						<td>{{company.productsum}}</td>
-						<td>{{company.valuation}}</td>
+						<td>{{"{:,}".format(company.valuation)}}</td>
 					</tr>
 					{% endfor %}
 				</tbody>

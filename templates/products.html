@@ -14,19 +14,22 @@
 						<th>Ejer</th>
 						<th>Soglte enheder</th>
 						<th>Pris pr. enhed</th>
-						<th>Værdi</th>
+						<th>Indtjening</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% for task in tasks %}
+					{% if task.status == 10 or task.status == 11 %}
+					{% else %}
 					<tr>
             <td><a href="/task/{{task.id}}">{{task.title}}</a></td>
 						<td>{{task.createdate}}</td>
 						<td><a href="/office/{{task.uid}}">{{task.companyname}}</a></td>
 						<td>{{task.copiessold}}</td>
 						<td>{{task.retail}}</td>
-						<td>{{task.value}}</td>
+						<td>{{"{:,}".format(task.value)}}</td>
 					</tr>
+					{% endif %}
 					{% endfor %}
 				</tbody>
 			</table>

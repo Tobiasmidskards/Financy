@@ -5,23 +5,22 @@
 <div class="container">
 	<div class="row">
 		<div class="col-sm-12">
-			<h1>Opgradér kontor</h1>
+			<h1>Opgradér virksomhedstype</h1>
 		</div>
 	</div>
 	<hr>
 	<div class="row">
-
 		<div class="col-sm-12">
-			<h3>{{{1:"Garage", 2:"Kælder"}[office]}} <small>til</small> {{{2: "Kælder", 3:"Småt kontorfællesskab"}[office+1]}}</h3>
+			<h3>{{{1:"Freelance", 2:"Enkeltmands virksomhed", 3:"Mindre virksomhed", 4:"Aps", 5:"Aktieselskab"}[companytype]}} <small>til</small> {{{2:"Enkeltmands virksomhed", 3:"Mindre virksomhed", 4:"Aps", 5:"Aktieselskab"}[companytype+1]}}</h3>
 		</div>
 
 	</div>
 	<div class="row">
 
 		<div class="col-sm-12">
-			<h1>Pris {{{1:"1.000.000",
-									2:"3.000.000",
-									3:"5.000.000"}[office]}} ,- 			<form  method="POST">
+			<h1>Pris {{{1:"300.000",
+									2:"1.000.000",
+									3:"3.000.000"}[companytype]}} ,- 			<form  method="POST">
 																											<button type="submit" name="button" class="btn btn-primary">Køb</button>
 																										</form></h1>
 		</div>

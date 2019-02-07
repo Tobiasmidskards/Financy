@@ -1,0 +1,54 @@
+{% extends 'layout.html' %}
+
+{% block body %}
+
+{% if employee.companyid == -1%}
+
+
+<div class="container">
+
+  <div class="row">
+    <div class="col">
+      <h1>Medarbejdersamtale</h1>
+      <p>En kop kaffe <i>med</i> <b>{{employee.firstname + " " + employee.lastname}}</b></p>
+    </div>
+    <div class="col">
+      <a href="/hire/{{employee.id}}"><button type="button" class="btn btn-sm btn-success float-right" name="button">Ansæt medarbejder</button></a>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <h1>Medarbejdersamtale</h1>
+      <p>Under fire øjne <i>med</i> <b>{{employee.firstname + " " + employee.lastname}}</b></p>
+    </div>
+    <div class="col">
+      <a href="/fire/{{employee.id}}"><button type="button" class="btn btn-sm btn-danger float-right" name="button">Fyr medarbejder</button></a>
+    </div>
+    </div>
+  </div>
+
+  <hr>
+  <div class="row">
+    <div class="col">
+      {% from "includes/_formhelpers.html" import render_field%}
+      <form action="" method="post">
+        <div class="form-group">
+          {{render_field(form.jobtitle, class_="form-control")}}
+        </div>
+
+        <p><input type="submit" value="Skift" class="btn btn-sm btn-primary"></p>
+      </form>
+    </div>
+    <div class="col">
+
+    </div>
+  </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}
