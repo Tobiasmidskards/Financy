@@ -1,3 +1,5 @@
 # Financy
+## www.financy.dk
+Onlinebaseret managerspil.
 
-Onlinebaseret managerspil, hvor at man har sit eget firma. 
+![alt text](https://github.com/Tobiasmidskards/Financy/blob/master/screendump.png)
